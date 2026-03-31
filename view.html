@@ -901,6 +901,10 @@
             const result = await response.json();
 
             if (result.status === 'success') {
+                // DEBUG: log first row to console so you can verify periodeP is returned by API
+                if (result.data && result.data.length > 0) {
+                    console.log('[DEBUG] Sample API row:', result.data[0]);
+                }
                 allData = expandKitData(result.data);
                 extractFilterOptions();
                 createFilterCheckboxes();
