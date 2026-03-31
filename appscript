@@ -5469,7 +5469,7 @@ function submitPaymentDataMultiKit(formData) {
           kit.serialNumber || '',     // F: Serial Number
           kit.paket,                  // G: Paket
           kit.tipePembayaran || '',   // H: Tipe Pembayaran (🆕 NOW PER-KIT)
-          formData.periodeP || '',    // I: Periode Pembayaran (🆕 NEW)
+          kit.periodeP || '',          // I: Periode Pembayaran (per-KIT)
           kit.nominal                 // J: Nominal (per-KIT nominal)
         ];
 
@@ -5559,9 +5559,9 @@ function submitPaymentDataMultiKit(formData) {
           formData.kitNumbers,  // E: Serial Number (KIT) ← dari KIT Number client
           serialNumbers,        // F: Serial Number ← BARU dari Serial Number client
           formData.kitPackages, // G: Paket ← GESER dari F
-          formData.selectedKits[0].tipePembayaran || formData.tipe || '',  // H: Tipe Pembayaran (🔧 FIX: Use per-KIT)
-          formData.periodeP || '', // I: Periode Pembayaran (🆕 NEW)
-          formData.nominal      // J: Nominal ← GESER dari H
+          formData.selectedKits[0].tipePembayaran || formData.tipe || '',  // H: Tipe Pembayaran (per-KIT)
+          formData.selectedKits[0].periodeP || '', // I: Periode Pembayaran (per-KIT)
+          formData.nominal      // J: Nominal
           // K: Jumlah Total akan dihitung running total ← GESER dari I
           // L: Total Harian akan di-merge ← GESER dari J
         ];
@@ -5576,9 +5576,9 @@ function submitPaymentDataMultiKit(formData) {
           kit.kitNumber,        // E: Serial Number (KIT) ← dari KIT Number client
           kit.serialNumber || '', // F: Serial Number ← BARU dari Serial Number client
           kit.paket,           // G: Paket ← GESER dari F
-          kit.tipePembayaran || formData.tipe || '',  // H: Tipe Pembayaran (🔧 FIX: Use per-KIT first)
-          formData.periodeP || '', // I: Periode Pembayaran (🆕 NEW)
-          kit.nominal || formData.nominal // J: Nominal ← GESER dari H
+          kit.tipePembayaran || formData.tipe || '',  // H: Tipe Pembayaran (per-KIT)
+          kit.periodeP || '', // I: Periode Pembayaran (per-KIT)
+          kit.nominal || formData.nominal // J: Nominal
           // K: Jumlah Total akan dihitung running total ← GESER dari I
           // L: Total Harian akan di-merge ← GESER dari J
         ];

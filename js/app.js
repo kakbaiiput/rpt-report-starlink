@@ -269,49 +269,31 @@ function getFormDateValue() {
     return '';
 }
 
-// 🔧 PERIODE PEMBAYARAN SETUP
-function setupPeriodePembayaran() {
-    const bulanSelect = document.getElementById('periodeBulan');
-    const tahunSelect = document.getElementById('periodeTahun');
-    const hiddenInput = document.getElementById('periodePembayaran');
-    const periodeDisplay = document.getElementById('periodeDisplay');
+// 🔧 PERIODE PEMBAYARAN HELPERS (per-KIT)
+const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
-    if (!bulanSelect || !tahunSelect || !hiddenInput || !periodeDisplay) return;
-
-    const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function getCurrentPeriodeDefault() {
     const now = new Date();
-    const currentYear = now.getFullYear();
-
-    // Populate tahun
-    for (let y = currentYear - 2; y <= currentYear + 2; y++) {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = y;
-        if (y === currentYear) opt.selected = true;
-        tahunSelect.appendChild(opt);
-    }
-
-    // Set default ke bulan saat ini
-    bulanSelect.value = now.getMonth() + 1;
-
-    function updatePeriode() {
-        const bulan = parseInt(bulanSelect.value);
-        const tahun = parseInt(tahunSelect.value);
-        const periodeStr = namaBulan[bulan - 1] + ' ' + tahun;
-        hiddenInput.value = periodeStr;
-        periodeDisplay.textContent = periodeStr;
-    }
-
-    bulanSelect.addEventListener('change', updatePeriode);
-    tahunSelect.addEventListener('change', updatePeriode);
-
-    updatePeriode();
+    return { bulan: now.getMonth() + 1, tahun: now.getFullYear() };
 }
 
-// 🔧 GET PERIODE PEMBAYARAN VALUE
-function getPeriodePembayaranValue() {
-    const hiddenInput = document.getElementById('periodePembayaran');
-    return hiddenInput ? hiddenInput.value : '';
+function buildPeriodeString(bulan, tahun) {
+    return NAMA_BULAN[bulan - 1] + ' ' + tahun;
+}
+
+function generateBulanOptions(selectedBulan) {
+    return NAMA_BULAN.map((m, i) =>
+        `<option value="${i + 1}" ${selectedBulan === i + 1 ? 'selected' : ''}>${m}</option>`
+    ).join('');
+}
+
+function generateTahunOptions(selectedTahun) {
+    const cur = new Date().getFullYear();
+    let html = '';
+    for (let y = cur - 1; y <= cur + 2; y++) {
+        html += `<option value="${y}" ${selectedTahun === y ? 'selected' : ''}>${y}</option>`;
+    }
+    return html;
 }
 
 // 🔧 FORMAT DATE FOR DISPLAY (DD/MM/YYYY)
@@ -678,9 +660,6 @@ function initializeForm() {
     // Setup custom date picker
     setupCustomDatePicker();
 
-    // Setup periode pembayaran
-    setupPeriodePembayaran();
-
     // Apply mobile responsive
     forceMobileLayout();
     
@@ -840,12 +819,16 @@ function setupEventListeners() {
                             // Check if KIT already exists
                             const exists = availableKits.some(k => k.kitNumber === kit.kitNumber);
                             if (!exists) {
+                                const defPeriode = getCurrentPeriodeDefault();
                                 availableKits.push({
                                     ...kit,
-                                    clientName: currentClientName, // 🆕 FIX: Store client name per-KIT
+                                    clientName: currentClientName,
                                     isSelected: false,
                                     nominal: 0,
-                                    tipePembayaran: '', // 🆕 NEW: Per-KIT payment type
+                                    tipePembayaran: '',
+                                    periodeBulan: defPeriode.bulan,  // default bulan saat ini
+                                    periodeTahun: defPeriode.tahun,  // default tahun saat ini
+                                    periodeP: buildPeriodeString(defPeriode.bulan, defPeriode.tahun),
                                     isDuplicate: data.duplicate?.duplicateKits?.includes(kit.kitNumber) || false
                                 });
                             }
@@ -1171,21 +1154,20 @@ async function confirmAndSubmit() {
             submissionTime: submitStartTime,
             tanggal: tanggalValue,
             nama: namaValue,
-            periodeP: getPeriodePembayaranValue(), // Periode Pembayaran (e.g. "Maret 2026")
-            // 🆕 REMOVED: tipe - no longer global, each KIT has its own
             nominal: totalNominal, // Total for summary purposes
             kitNumbers: kitNumbers,
             kitPackages: kitPackages,
             kitCount: selectedKits.length,
             isMultipleKit: selectedKits.length > 1,
-            submitAsMultipleEntries: true, // NEW: flag to indicate separate entries
+            submitAsMultipleEntries: true,
             selectedKits: selectedKits.map(kit => ({
                 kitNumber: kit.kitNumber,
                 serialNumber: kit.serialNumber || '',
                 paket: kit.paket,
-                nominal: kit.nominal, // Per-KIT nominal
-                tipePembayaran: kit.tipePembayaran, // 🆕 NEW: Per-KIT payment type
-                clientName: kit.clientName || namaValue // 🔧 FIX: Per-KIT client name
+                nominal: kit.nominal,
+                tipePembayaran: kit.tipePembayaran,
+                periodeP: kit.periodeP || (() => { const d = getCurrentPeriodeDefault(); return buildPeriodeString(d.bulan, d.tahun); })(),
+                clientName: kit.clientName || namaValue
             }))
         };
 
@@ -3066,8 +3048,8 @@ function updateKitDisplay() {
                     </small>
                 </div>
 
-                <!-- 🆕 NEW: Payment Type Dropdown (shown when selected) -->
-                <div class="kit-payment-type" style="display: ${kit.isSelected ? 'block' : 'none'}; padding: 12px; background: #0f172a; border-radius: 8px; border: 2px solid #f59e0b;">
+                <!-- Payment Type Dropdown (shown when selected) -->
+                <div class="kit-payment-type" style="display: ${kit.isSelected ? 'block' : 'none'}; padding: 12px; background: #0f172a; border-radius: 8px; border: 2px solid #f59e0b; margin-bottom: 12px;">
                     <label style="display: block; color: #fef3c7; font-size: 13px; font-weight: 600; margin-bottom: 8px;">
                         💳 Tipe Pembayaran:
                     </label>
@@ -3081,6 +3063,28 @@ function updateKitDisplay() {
                     </select>
                     <small style="color: #94a3b8; font-size: 11px; display: block; margin-top: 6px;">
                         ℹ️ Pilih tipe pembayaran - Wajib diisi
+                    </small>
+                </div>
+
+                <!-- Periode Pembayaran per KIT (shown when selected) -->
+                <div class="kit-periode-input" style="display: ${kit.isSelected ? 'block' : 'none'}; padding: 12px; background: #0f172a; border-radius: 8px; border: 2px solid #10b981;">
+                    <label style="display: block; color: #d1fae5; font-size: 13px; font-weight: 600; margin-bottom: 8px;">
+                        📆 Periode Pembayaran:
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <select class="periode-bulan-per-kit"
+                                data-kit-index="${index}"
+                                style="flex: 1; padding: 10px 10px; background: #1e293b; border: 2px solid #475569; border-radius: 6px; color: #f1f5f9; font-size: 14px; cursor: pointer; transition: all 0.3s ease;">
+                            ${generateBulanOptions(kit.periodeBulan || getCurrentPeriodeDefault().bulan)}
+                        </select>
+                        <select class="periode-tahun-per-kit"
+                                data-kit-index="${index}"
+                                style="width: 90px; padding: 10px 8px; background: #1e293b; border: 2px solid #475569; border-radius: 6px; color: #f1f5f9; font-size: 14px; cursor: pointer; transition: all 0.3s ease;">
+                            ${generateTahunOptions(kit.periodeTahun || getCurrentPeriodeDefault().tahun)}
+                        </select>
+                    </div>
+                    <small style="color: #94a3b8; font-size: 11px; display: block; margin-top: 6px;">
+                        ℹ️ Default: bulan saat ini — ubah jika berbeda
                     </small>
                 </div>
                 </div>
@@ -3131,25 +3135,36 @@ function updateKitDisplay() {
             });
         }
 
-        // 🆕 NEW: Payment type dropdown handler
+        // Payment type dropdown handler
         const paymentTypeSelect = kitItem.querySelector('.payment-type-per-kit');
         if (paymentTypeSelect) {
-            paymentTypeSelect.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-
+            paymentTypeSelect.addEventListener('click', function(e) { e.stopPropagation(); });
             paymentTypeSelect.addEventListener('change', function(e) {
                 handleKitPaymentTypeChange(index, this.value);
             });
-
             paymentTypeSelect.addEventListener('focus', function() {
                 this.style.borderColor = '#f59e0b';
                 this.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
             });
-
             paymentTypeSelect.addEventListener('blur', function() {
                 this.style.borderColor = '#475569';
                 this.style.boxShadow = 'none';
+            });
+        }
+
+        // Periode Pembayaran per-KIT handlers
+        const periodeBulanSelect = kitItem.querySelector('.periode-bulan-per-kit');
+        const periodeTahunSelect = kitItem.querySelector('.periode-tahun-per-kit');
+        if (periodeBulanSelect) {
+            periodeBulanSelect.addEventListener('click', function(e) { e.stopPropagation(); });
+            periodeBulanSelect.addEventListener('change', function(e) {
+                handleKitPeriodeChange(index, parseInt(this.value), availableKits[index].periodeTahun);
+            });
+        }
+        if (periodeTahunSelect) {
+            periodeTahunSelect.addEventListener('click', function(e) { e.stopPropagation(); });
+            periodeTahunSelect.addEventListener('change', function(e) {
+                handleKitPeriodeChange(index, availableKits[index].periodeBulan, parseInt(this.value));
             });
         }
 
@@ -3234,6 +3249,21 @@ function handleKitPaymentTypeChange(kitIndex, value) {
         console.log('🔄 Triggering stepper navigation update after payment type change...');
         window.stepperNav.updateNavigationButtons();
     }
+}
+
+// Handle periode pembayaran change per KIT
+function handleKitPeriodeChange(kitIndex, bulan, tahun) {
+    const periodeStr = buildPeriodeString(bulan, tahun);
+    availableKits[kitIndex].periodeBulan = bulan;
+    availableKits[kitIndex].periodeTahun = tahun;
+    availableKits[kitIndex].periodeP = periodeStr;
+
+    if (availableKits[kitIndex].isSelected) {
+        const sel = selectedKits.findIndex(k => k.kitNumber === availableKits[kitIndex].kitNumber);
+        if (sel !== -1) selectedKits[sel].periodeP = periodeStr;
+    }
+    window.selectedKits = selectedKits;
+    console.log(`📆 Periode updated for KIT ${availableKits[kitIndex].kitNumber}: ${periodeStr}`);
 }
 
 // 🆕 Update Step 3 Summary Display

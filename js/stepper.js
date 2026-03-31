@@ -581,7 +581,6 @@ function updateLocalPreview() {
     const tanggalIndonesiaEl = document.getElementById('tanggalIndonesia');
     const clientNameTextEl = document.getElementById('clientNameText');
     const tipePembayaranEl = document.getElementById('tipePembayaran');
-    const periodeDisplayEl = document.getElementById('periodeDisplay');
 
     // 🆕 NEW: Get selected KITs from window scope (set by app.js)
     const selectedKitsData = window.selectedKits || [];
@@ -590,14 +589,12 @@ function updateLocalPreview() {
         tanggalIndonesia: !!tanggalIndonesiaEl,
         clientNameText: !!clientNameTextEl,
         tipePembayaran: !!tipePembayaranEl,
-        periodeDisplay: !!periodeDisplayEl,
         selectedKitsData: selectedKitsData.length
     });
 
     const tanggalIndonesia = tanggalIndonesiaEl?.textContent || '-';
     const clientNameText = clientNameTextEl?.textContent || '-';
     const tipePembayaran = tipePembayaranEl?.value || '-';
-    const periodeDisplay = periodeDisplayEl?.textContent || '-';
 
     // 🆕 NEW: Calculate total nominal from selectedKits
     const totalNominal = selectedKitsData.reduce((sum, kit) => sum + (kit.nominal || 0), 0);
@@ -607,7 +604,6 @@ function updateLocalPreview() {
         tanggal: tanggalIndonesia,
         client: clientNameText,
         tipe: tipePembayaran,
-        periode: periodeDisplay,
         nominal: nominalFormatted,
         totalNominal: totalNominal,
         selectedKitsCount: selectedKitsData.length
@@ -641,7 +637,7 @@ function updateLocalPreview() {
             const kitNominal = kit.nominal ? `Rp ${kit.nominal.toLocaleString('id-ID')}` : 'Rp 0';
             const kitPaymentType = kit.tipePembayaran || 'Not Set';
             const paymentIcon = kit.tipePembayaran === 'Aktivasi' ? '🚀' : kit.tipePembayaran === 'Perpanjangan' ? '🔄' : kit.tipePembayaran === 'Migrasi' ? '🔀' : '❓';
-            // 🔧 FIX: Get client name from individual KIT
+            const kitPeriode = kit.periodeP || '-';
             const kitClientName = kit.clientName || 'Unknown Client';
 
             console.log(`📦 KIT ${index + 1}:`, {kitNumber, kitPackage, clientName: kitClientName, nominal: kitNominal, paymentType: kitPaymentType});
@@ -666,6 +662,9 @@ function updateLocalPreview() {
                                 <div style="color:#fbbf24;font-size:12px;font-weight:600;">
                                     ${paymentIcon} ${kitPaymentType}
                                 </div>
+                                <div style="color:#34d399;font-size:12px;font-weight:600;margin-top:2px;">
+                                    📆 ${kitPeriode}
+                                </div>
                             </div>
                             <div style="text-align:right;">
                                 <div style="color:#10b981;font-size:14px;font-weight:700;background:#064e3b;padding:6px 10px;border-radius:6px;">
@@ -689,11 +688,6 @@ function updateLocalPreview() {
             <div class="preview-item" style="display:flex;justify-content:space-between;padding:12px 15px;background:#334155;border-radius:8px;border:1px solid #475569;">
                 <span style="font-weight:600;color:#94a3b8;font-size:14px;">📅 Tanggal Pembayaran:</span>
                 <span style="font-weight:700;color:#f1f5f9;font-size:14px;">${tanggalIndonesia}</span>
-            </div>
-
-            <div class="preview-item" style="display:flex;justify-content:space-between;padding:12px 15px;background:#334155;border-radius:8px;border:1px solid #10b981;">
-                <span style="font-weight:600;color:#94a3b8;font-size:14px;">📆 Periode Pembayaran:</span>
-                <span style="font-weight:700;color:#10b981;font-size:14px;">${periodeDisplay}</span>
             </div>
 
             <div class="preview-item" style="display:flex;justify-content:space-between;padding:12px 15px;background:#334155;border-radius:8px;border:1px solid #475569;">
