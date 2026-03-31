@@ -261,12 +261,57 @@ function setupCustomDatePicker() {
 // 🔧 GET FORM DATE VALUE
 function getFormDateValue() {
     const hiddenInput = document.getElementById('tanggalPembayaran');
-    
+
     if (hiddenInput && hiddenInput.value) {
         return hiddenInput.value; // Format ISO untuk backend
     }
-    
+
     return '';
+}
+
+// 🔧 PERIODE PEMBAYARAN SETUP
+function setupPeriodePembayaran() {
+    const bulanSelect = document.getElementById('periodeBulan');
+    const tahunSelect = document.getElementById('periodeTahun');
+    const hiddenInput = document.getElementById('periodePembayaran');
+    const periodeDisplay = document.getElementById('periodeDisplay');
+
+    if (!bulanSelect || !tahunSelect || !hiddenInput || !periodeDisplay) return;
+
+    const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    // Populate tahun
+    for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        tahunSelect.appendChild(opt);
+    }
+
+    // Set default ke bulan saat ini
+    bulanSelect.value = now.getMonth() + 1;
+
+    function updatePeriode() {
+        const bulan = parseInt(bulanSelect.value);
+        const tahun = parseInt(tahunSelect.value);
+        const periodeStr = namaBulan[bulan - 1] + ' ' + tahun;
+        hiddenInput.value = periodeStr;
+        periodeDisplay.textContent = periodeStr;
+    }
+
+    bulanSelect.addEventListener('change', updatePeriode);
+    tahunSelect.addEventListener('change', updatePeriode);
+
+    updatePeriode();
+}
+
+// 🔧 GET PERIODE PEMBAYARAN VALUE
+function getPeriodePembayaranValue() {
+    const hiddenInput = document.getElementById('periodePembayaran');
+    return hiddenInput ? hiddenInput.value : '';
 }
 
 // 🔧 FORMAT DATE FOR DISPLAY (DD/MM/YYYY)
@@ -632,7 +677,10 @@ function initializeForm() {
     
     // Setup custom date picker
     setupCustomDatePicker();
-    
+
+    // Setup periode pembayaran
+    setupPeriodePembayaran();
+
     // Apply mobile responsive
     forceMobileLayout();
     
@@ -1123,6 +1171,7 @@ async function confirmAndSubmit() {
             submissionTime: submitStartTime,
             tanggal: tanggalValue,
             nama: namaValue,
+            periodeP: getPeriodePembayaranValue(), // Periode Pembayaran (e.g. "Maret 2026")
             // 🆕 REMOVED: tipe - no longer global, each KIT has its own
             nominal: totalNominal, // Total for summary purposes
             kitNumbers: kitNumbers,

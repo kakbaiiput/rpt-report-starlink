@@ -407,28 +407,28 @@ function calculateRunningTotalNew11Column(sheet) {
       return;
     }
     
-    // ✅ NEW: Get nominal values dari kolom I (bukan H)
-    var nominalRange = sheet.getRange(2, 9, lastRow - 1, 1); // I2:I(lastRow)
+    // ✅ Get nominal values dari kolom J (col 10) - setelah Periode Pembayaran di I
+    var nominalRange = sheet.getRange(2, 10, lastRow - 1, 1); // J2:J(lastRow)
     var nominalValues = nominalRange.getValues();
-    
+
     Logger.log(`Processing ${nominalValues.length} rows for running total`);
-    
+
     var runningTotal = 0;
     var runningTotalValues = [];
-    
+
     for (var i = 0; i < nominalValues.length; i++) {
       var nominal = parseFloat(nominalValues[i][0]) || 0;
       runningTotal += nominal;
       runningTotalValues.push([runningTotal]);
-      
+
       Logger.log(`Row ${i + 2}: Nominal=${nominal} | Running Total=${runningTotal}`);
     }
-    
-    // ✅ NEW: Set running total values ke kolom J (bukan I)
-    var totalRange = sheet.getRange(2, 10, lastRow - 1, 1); // J2:J(lastRow)
+
+    // ✅ Set running total values ke kolom K (col 11)
+    var totalRange = sheet.getRange(2, 11, lastRow - 1, 1); // K2:K(lastRow)
     totalRange.setValues(runningTotalValues);
-    
-    Logger.log('✅ Running total calculation completed (NEW structure I→J)');
+
+    Logger.log('✅ Running total calculation completed (12-column structure J→K)');
     Logger.log(`Final running total: ${runningTotal}`);
     
     return runningTotal;
@@ -452,25 +452,25 @@ function sortAndOrganizeWithNew11ColumnStructure(sheet) {
       return;
     }
     
-    // ✅ NEW: Clear dan unmerge kolom K dulu sebelum sort
+    // ✅ Clear dan unmerge kolom L dulu sebelum sort (Total Harian)
     if (lastRow > 1) {
-      var clearRange = sheet.getRange(2, 11, lastRow - 1, 1); // K column
+      var clearRange = sheet.getRange(2, 12, lastRow - 1, 1); // L column
       clearRange.clearContent();
       clearRange.clearFormat();
-      
+
       try {
         clearRange.breakApart();
-        Logger.log('✅ Unmerged column K before sorting');
+        Logger.log('✅ Unmerged column L before sorting');
       } catch (e) {
         Logger.log('No merges to break apart');
       }
     }
-    
-    // Ensure column K header exists
-    sheet.getRange(1, 11).setValue('Total Harian');
-    
-    // ✅ NEW: Sort hanya kolom A-J (tanpa kolom K)
-    var dataRange = sheet.getRange(2, 1, lastRow - 1, 10); // A2:J(lastRow) only
+
+    // Ensure column L header exists
+    sheet.getRange(1, 12).setValue('Total Harian');
+
+    // ✅ Sort hanya kolom A-K (tanpa kolom L)
+    var dataRange = sheet.getRange(2, 1, lastRow - 1, 11); // A2:K(lastRow) only
     var data = dataRange.getValues();
     
     Logger.log('Data length before sort: ' + data.length);
@@ -491,7 +491,7 @@ function sortAndOrganizeWithNew11ColumnStructure(sheet) {
     
     Logger.log('✅ Sequential numbers updated');
     
-    // ✅ NEW: Write sorted data back ke sheet (kolom A-J)
+    // ✅ Write sorted data back ke sheet (kolom A-K)
     dataRange.setValues(data);
     
     // ✅ NEW: Calculate RUNNING TOTAL untuk kolom J
@@ -524,21 +524,21 @@ function calculateDailySummaryWithMergeNew11Column(sheet) {
       return;
     }
     
-    // ✅ NEW: Get all data setelah sorting (A2:J struktur baru)
-    var data = sheet.getRange(2, 1, lastRow - 1, 10).getValues(); // A2:J(lastRow)
-    
+    // ✅ Get all data setelah sorting (A2:K struktur 12 kolom)
+    var data = sheet.getRange(2, 1, lastRow - 1, 11).getValues(); // A2:K(lastRow)
+
     if (data.length === 0) {
       Logger.log('No data found');
       return;
     }
-    
+
     var dailyGroups = {};
     var rowsByDate = {};
-    
+
     for (var i = 0; i < data.length; i++) {
       var row = data[i];
       var tanggal = row[1]; // Kolom B: Tanggal
-      var nominal = parseFloat(row[8]) || 0; // ✅ NEW: Kolom I: Nominal (bukan H)
+      var nominal = parseFloat(row[9]) || 0; // Kolom J (index 9): Nominal
       
       var dateString = '';
       if (tanggal instanceof Date) {
@@ -566,28 +566,28 @@ function calculateDailySummaryWithMergeNew11Column(sheet) {
       Logger.log(`  ${date}: Rp ${dailyGroups[date].toLocaleString('id-ID')} (${rowsByDate[date].length} transaksi)`);
     }
     
-    // ✅ NEW: Apply daily summary dengan MERGE CELLS di kolom K (bukan J)
+    // ✅ Apply daily summary dengan MERGE CELLS di kolom L (col 12)
     for (var dateString in dailyGroups) {
       var dailyTotal = dailyGroups[dateString];
       var rows = rowsByDate[dateString];
-      
+
       if (rows.length > 0) {
         var formattedTotal = 'Rp ' + dailyTotal.toLocaleString('id-ID');
-        
+
         var firstRow = Math.min(...rows);
         var lastRowOfGroup = Math.max(...rows);
-        
-        // ✅ NEW: Set value di baris pertama di kolom K (bukan J)
-        sheet.getRange(firstRow, 11).setValue(formattedTotal);
-        
+
+        // Set value di baris pertama di kolom L (col 12)
+        sheet.getRange(firstRow, 12).setValue(formattedTotal);
+
         if (rows.length > 1) {
-          var mergeRange = sheet.getRange(firstRow, 11, lastRowOfGroup - firstRow + 1, 1);
+          var mergeRange = sheet.getRange(firstRow, 12, lastRowOfGroup - firstRow + 1, 1);
           mergeRange.merge();
-          Logger.log(`✅ Merged K${firstRow}:K${lastRowOfGroup} for ${dateString}`);
+          Logger.log(`✅ Merged L${firstRow}:L${lastRowOfGroup} for ${dateString}`);
         }
-        
+
         // Apply formatting untuk merged range
-        var summaryRange = sheet.getRange(firstRow, 11, lastRowOfGroup - firstRow + 1, 1);
+        var summaryRange = sheet.getRange(firstRow, 12, lastRowOfGroup - firstRow + 1, 1);
         summaryRange.setBackground('#fef3c7')
                    .setFontWeight('bold')
                    .setFontSize(10)
@@ -596,12 +596,12 @@ function calculateDailySummaryWithMergeNew11Column(sheet) {
                    .setVerticalAlignment('middle')
                    .setNumberFormat('"Rp"#,##0')
                    .setBorder(true, true, true, true, false, false, '#d97706', SpreadsheetApp.BorderStyle.SOLID);
-        
+
         Logger.log(`✅ Applied daily summary for ${dateString}: ${formattedTotal} (${rows.length} transaksi)`);
       }
     }
-    
-    Logger.log('✅ Daily summary calculation completed for NEW 11-column structure');
+
+    Logger.log('✅ Daily summary calculation completed for 12-column structure');
     
   } catch (error) {
     Logger.log('❌ Daily summary calculation error: ' + error.message);
@@ -617,12 +617,12 @@ function applyFormattingWithMergeNew11Column(sheet) {
     Logger.log('🎨 Applying complete formatting with NEW 11-column structure...');
     
     var lastRow = sheet.getLastRow();
-    var lastCol = 11; // ✅ NEW: Fixed to column K
-    
+    var lastCol = 12; // Fixed to column L (12-column structure)
+
     if (lastRow <= 1) return;
-    
+
     Logger.log(`Applying improved formatting to report sheet: ${sheet.getName()} (${lastRow} rows, ${lastCol} columns)`);
-    
+
     // Header formatting (Row 1)
     var headerRange = sheet.getRange(1, 1, 1, lastCol);
     headerRange.setFontWeight('bold')
@@ -631,27 +631,27 @@ function applyFormattingWithMergeNew11Column(sheet) {
               .setHorizontalAlignment('center')
               .setVerticalAlignment('middle')
               .setFontSize(11);
-    
-    // ✅ NEW: Data formatting (Row 2 onwards) - Format kolom A-J saja
+
+    // Data formatting (Row 2 onwards) - Format kolom A-K saja (tanpa L=Total Harian yang di-merge)
     if (lastRow > 1) {
-      var dataRange = sheet.getRange(2, 1, lastRow - 1, 10); // A2:J(lastRow)
+      var dataRange = sheet.getRange(2, 1, lastRow - 1, 11); // A2:K(lastRow)
       dataRange.setHorizontalAlignment('center')
                .setVerticalAlignment('middle')
                .setFontSize(10);
-      
-      // ✅ NEW: COLUMN-SPECIFIC FORMATTING dengan struktur 11 kolom
-      
+
+      // COLUMN-SPECIFIC FORMATTING struktur 12 kolom
+
       // A: Nomor urut
       sheet.getRange(2, 1, lastRow - 1, 1)
            .setFontWeight('bold')
            .setNumberFormat('0')
            .setHorizontalAlignment('center');
-      
+
       // B: Tanggal
       sheet.getRange(2, 2, lastRow - 1, 1)
            .setNumberFormat('dd/mm/yyyy')
            .setHorizontalAlignment('center');
-      
+
       // C: Transaction ID
       sheet.getRange(2, 3, lastRow - 1, 1)
            .setFontFamily('Roboto Mono')
@@ -661,100 +661,110 @@ function applyFormattingWithMergeNew11Column(sheet) {
            .setFontColor('#6366f1')
            .setHorizontalAlignment('center')
            .setBorder(true, true, true, true, false, false, '#e2e8f0', SpreadsheetApp.BorderStyle.SOLID);
-      
+
       // D: Nama Client
       sheet.getRange(2, 4, lastRow - 1, 1)
            .setFontFamily('Roboto')
            .setFontWeight('normal')
            .setHorizontalAlignment('left')
            .setVerticalAlignment('middle');
-      
-      // E: Serial Number (KIT)
+
+      // E: KIT Number
       sheet.getRange(2, 5, lastRow - 1, 1)
            .setFontFamily('Roboto')
            .setFontWeight('normal')
            .setFontSize(10)
            .setHorizontalAlignment('center')
            .setVerticalAlignment('middle');
-      
-      // ✅ NEW: F: Serial Number (BARU)
+
+      // F: Serial Number
       sheet.getRange(2, 6, lastRow - 1, 1)
            .setFontFamily('Roboto')
            .setFontWeight('normal')
            .setFontSize(10)
            .setHorizontalAlignment('center')
            .setVerticalAlignment('middle')
-           .setBackground('#f0f9ff')      // Background biru muda untuk kolom baru
-           .setFontColor('#0369a1');      // Warna biru tua
-      
-      // ✅ NEW: G: Paket (GESER dari F)
+           .setBackground('#f0f9ff')
+           .setFontColor('#0369a1');
+
+      // G: Paket
       sheet.getRange(2, 7, lastRow - 1, 1)
            .setFontFamily('Roboto')
            .setHorizontalAlignment('center');
-      
-      // ✅ NEW: H: Tipe Pembayaran (GESER dari G)
+
+      // H: Tipe Pembayaran
       sheet.getRange(2, 8, lastRow - 1, 1)
            .setFontFamily('Roboto')
            .setHorizontalAlignment('center');
-      
-      // ✅ NEW: I: Nominal (GESER dari H)
+
+      // I: Periode Pembayaran (NEW)
       sheet.getRange(2, 9, lastRow - 1, 1)
+           .setFontFamily('Roboto')
+           .setFontWeight('bold')
+           .setHorizontalAlignment('center')
+           .setBackground('#ecfdf5')
+           .setFontColor('#065f46');
+
+      // J: Nominal
+      sheet.getRange(2, 10, lastRow - 1, 1)
            .setNumberFormat('"Rp"#,##0')
            .setHorizontalAlignment('center')
            .setFontWeight('bold')
            .setFontColor('#7c3aed');
-      
-      // ✅ NEW: J: Total (GESER dari I)
-      sheet.getRange(2, 10, lastRow - 1, 1)
+
+      // K: Jumlah Total (Running Total)
+      sheet.getRange(2, 11, lastRow - 1, 1)
            .setNumberFormat('"Rp"#,##0')
            .setHorizontalAlignment('center')
            .setFontWeight('bold')
            .setBackground('#dcfdf7')
            .setFontColor('#047857');
-      
-      // ✅ NEW: Alternating row colors (hindari kolom K yang di-merge)
+
+      // Alternating row colors (hindari kolom L yang di-merge)
       for (var row = 2; row <= lastRow; row++) {
-        var rowRange = sheet.getRange(row, 1, 1, 10); // A-J only
+        var rowRange = sheet.getRange(row, 1, 1, 11); // A-K only
         if (row % 2 === 0) {
           rowRange.setBackground('#f8f9fa');
         } else {
           rowRange.setBackground('#ffffff');
         }
-        
+
         // Override backgrounds for special columns
         sheet.getRange(row, 3, 1, 1).setBackground('#f8fafc'); // Transaction ID
-        sheet.getRange(row, 6, 1, 1).setBackground('#f0f9ff'); // Serial Number (NEW)
-        sheet.getRange(row, 10, 1, 1).setBackground('#dcfdf7'); // Total
+        sheet.getRange(row, 6, 1, 1).setBackground('#f0f9ff'); // Serial Number
+        sheet.getRange(row, 9, 1, 1).setBackground('#ecfdf5'); // Periode Pembayaran
+        sheet.getRange(row, 11, 1, 1).setBackground('#dcfdf7'); // Total
       }
     }
-    
-    // ✅ NEW: AUTO-RESIZE COLUMNS dengan minimum widths untuk 11 kolom
+
+    // AUTO-RESIZE COLUMNS dengan minimum widths untuk 12 kolom
     sheet.autoResizeColumns(1, lastCol);
-    
+
     var minWidths = {
       1: 50,   // A: Nomor
-      2: 90,   // B: Tanggal  
+      2: 90,   // B: Tanggal
       3: 140,  // C: Transaction ID
       4: 120,  // D: Nama Client
-      5: 130,  // E: Serial Number (KIT)
-      6: 130,  // F: Serial Number ← BARU
-      7: 80,   // G: Paket ← GESER dari F
-      8: 90,   // H: Tipe Pembayaran ← GESER dari G
-      9: 90,   // I: Nominal ← GESER dari H
-      10: 110, // J: Total ← GESER dari I
-      11: 140  // K: Total Harian ← GESER dari J
+      5: 130,  // E: KIT Number
+      6: 130,  // F: Serial Number
+      7: 80,   // G: Paket
+      8: 90,   // H: Tipe Pembayaran
+      9: 120,  // I: Periode Pembayaran
+      10: 90,  // J: Nominal
+      11: 110, // K: Jumlah Total
+      12: 140  // L: Total Harian
     };
-    
+
     for (var col = 1; col <= lastCol; col++) {
       var currentWidth = sheet.getColumnWidth(col);
       var minWidth = minWidths[col] || 80;
-      
+
       if (currentWidth < minWidth) {
         sheet.setColumnWidth(col, minWidth);
       }
     }
-    
-    Logger.log('✅ Complete formatting with NEW 11-column structure applied');
+
+    Logger.log('✅ Complete formatting with 12-column structure applied');
     
   } catch (error) {
     Logger.log('❌ Complete formatting error: ' + error.message);
@@ -769,15 +779,15 @@ function applyMasterFormattingToReportSheetNew11Column(sheet) {
     var lastRow = sheet.getLastRow();
     var lastCol = sheet.getLastColumn();
     
-    // ✅ NEW: Pastikan ada kolom K untuk Daily Summary
-    if (lastCol < 11) {
-      sheet.getRange(1, 11).setValue('Total Harian');
-      lastCol = 11;
+    // Pastikan ada kolom L untuk Daily Summary
+    if (lastCol < 12) {
+      sheet.getRange(1, 12).setValue('Total Harian');
+      lastCol = 12;
     }
-    
+
     if (lastRow <= 1) return;
-    
-    Logger.log(`Applying improved formatting to report sheet: ${sheet.getName()} (${lastRow} rows, ${lastCol} columns) with NEW 11-column structure`);
+
+    Logger.log(`Applying improved formatting to report sheet: ${sheet.getName()} (${lastRow} rows, ${lastCol} columns) with 12-column structure`);
     
     // Header formatting (Row 1)
     var headerRange = sheet.getRange(1, 1, 1, lastCol);
@@ -843,74 +853,84 @@ function applyMasterFormattingToReportSheetNew11Column(sheet) {
            .setBackground('#f0f9ff')      // Background biru muda untuk highlight kolom baru
            .setFontColor('#0369a1');      // Warna biru tua
       
-      // ✅ NEW: G: Paket (GESER dari F)
+      // G: Paket
       sheet.getRange(2, 7, lastRow - 1, 1)
            .setFontFamily('Roboto')
            .setHorizontalAlignment('center');
-      
-      // ✅ NEW: H: Tipe Pembayaran (GESER dari G)
+
+      // H: Tipe Pembayaran
       sheet.getRange(2, 8, lastRow - 1, 1)
            .setFontFamily('Roboto')
            .setHorizontalAlignment('center');
-      
-      // ✅ NEW: I: Nominal (GESER dari H)
+
+      // I: Periode Pembayaran (NEW)
       sheet.getRange(2, 9, lastRow - 1, 1)
+           .setFontFamily('Roboto')
+           .setFontWeight('bold')
+           .setHorizontalAlignment('center')
+           .setBackground('#ecfdf5')
+           .setFontColor('#065f46');
+
+      // J: Nominal
+      sheet.getRange(2, 10, lastRow - 1, 1)
            .setNumberFormat('"Rp"#,##0')
            .setHorizontalAlignment('center')
            .setFontWeight('bold')
            .setFontColor('#7c3aed');
-      
-      // ✅ NEW: J: Total (GESER dari I)
-      sheet.getRange(2, 10, lastRow - 1, 1)
+
+      // K: Jumlah Total (Running Total)
+      sheet.getRange(2, 11, lastRow - 1, 1)
            .setNumberFormat('"Rp"#,##0')
            .setHorizontalAlignment('center')
            .setFontWeight('bold')
            .setBackground('#dcfdf7')
            .setFontColor('#047857');
-      
+
       // Alternating row colors
       for (var row = 2; row <= lastRow; row++) {
-        var rowRange = sheet.getRange(row, 1, 1, Math.min(lastCol, 10));
+        var rowRange = sheet.getRange(row, 1, 1, Math.min(lastCol, 11));
         if (row % 2 === 0) {
           rowRange.setBackground('#f8f9fa');
         } else {
           rowRange.setBackground('#ffffff');
         }
-        
+
         // Override backgrounds for special columns
         sheet.getRange(row, 3, 1, 1).setBackground('#f8fafc'); // Transaction ID
-        sheet.getRange(row, 6, 1, 1).setBackground('#f0f9ff'); // Serial Number (NEW)
-        sheet.getRange(row, 10, 1, 1).setBackground('#dcfdf7'); // Total
+        sheet.getRange(row, 6, 1, 1).setBackground('#f0f9ff'); // Serial Number
+        sheet.getRange(row, 9, 1, 1).setBackground('#ecfdf5'); // Periode Pembayaran
+        sheet.getRange(row, 11, 1, 1).setBackground('#dcfdf7'); // Total
       }
     }
-    
-    // ✅ NEW: Auto-resize columns dengan minimum widths untuk 11 KOLOM
+
+    // Auto-resize columns dengan minimum widths untuk 12 kolom
     sheet.autoResizeColumns(1, lastCol);
-    
+
     var minWidths = {
       1: 50,   // A: Nomor
-      2: 90,   // B: Tanggal  
+      2: 90,   // B: Tanggal
       3: 140,  // C: Transaction ID
       4: 120,  // D: Nama Client
-      5: 130,  // E: Serial Number (KIT)
-      6: 130,  // F: Serial Number ← BARU
-      7: 80,   // G: Paket ← GESER dari F
-      8: 90,   // H: Tipe Pembayaran ← GESER dari G
-      9: 90,   // I: Nominal ← GESER dari H
-      10: 110, // J: Total ← GESER dari I
-      11: 140  // K: Total Harian ← GESER dari J
+      5: 130,  // E: KIT Number
+      6: 130,  // F: Serial Number
+      7: 80,   // G: Paket
+      8: 90,   // H: Tipe Pembayaran
+      9: 120,  // I: Periode Pembayaran
+      10: 90,  // J: Nominal
+      11: 110, // K: Jumlah Total
+      12: 140  // L: Total Harian
     };
-    
-    for (var col = 1; col <= Math.min(lastCol, 11); col++) {
+
+    for (var col = 1; col <= Math.min(lastCol, 12); col++) {
       var currentWidth = sheet.getColumnWidth(col);
       var minWidth = minWidths[col] || 80;
-      
+
       if (currentWidth < minWidth) {
         sheet.setColumnWidth(col, minWidth);
       }
     }
-    
-    Logger.log('✅ Report sheet formatting applied with NEW 11-column structure (F=Serial Number)');
+
+    Logger.log('✅ Report sheet formatting applied with 12-column structure (I=Periode Pembayaran)');
     
   } catch (error) {
     Logger.log('Error formatting report sheet: ' + error.message);
@@ -1835,7 +1855,9 @@ function getReportData(month, year) {
         kitNumber: data[i][4] || '',
         serialNumber: data[i][5] || '',
         paket: data[i][6] || '',
-        tipePembayaran: data[i][7] || ''
+        tipePembayaran: data[i][7] || '',
+        periodeP: data[i][8] || '',   // I: Periode Pembayaran (NEW)
+        nominal: data[i][9] || ''     // J: Nominal
       });
     }
     
@@ -5041,16 +5063,17 @@ function getReportSheet(month, year, createIfNotExists = false) {
       // Headers yang benar sesuai format konsisten
       var headers = [
         'Nomor',              // A
-        'Tanggal Transaksi',  // B  
+        'Tanggal Transaksi',  // B
         'ID Transaksi',       // C
         'Nama Client',        // D
         'KIT Number',         // E - FIXED: Konsisten dengan sheet lain
         'Serial Number',      // F - BARU
         'Paket',              // G - GESER dari F
         'Tipe Pembayaran',    // H - GESER dari G
-        'Nominal',            // I - GESER dari H
-        'Jumlah Total',       // J - GESER dari I
-        'Total Harian'        // K - GESER dari J
+        'Periode Pembayaran', // I - NEW: Periode bulan pembayaran
+        'Nominal',            // J - GESER dari I
+        'Jumlah Total',       // K - GESER dari J
+        'Total Harian'        // L - GESER dari K
       ];
       
       // Set headers
@@ -5076,8 +5099,8 @@ function formatNewReportSheet(sheet) {
   try {
     Logger.log('🎨 Applying formatting to new report sheet...');
     
-    var headers = 11; // A-K columns
-    
+    var headers = 12; // A-L columns
+
     // 1. HEADER FORMATTING (Row 1)
     var headerRange = sheet.getRange(1, 1, 1, headers);
     headerRange.setFontWeight('bold')
@@ -5087,20 +5110,21 @@ function formatNewReportSheet(sheet) {
               .setVerticalAlignment('middle')
               .setFontSize(11)
               .setFontFamily('Roboto');
-    
+
     // 2. COLUMN WIDTHS - Set specific widths for each column
     var columnWidths = {
       1: 60,   // A: Nomor
-      2: 120,  // B: Tanggal  
+      2: 120,  // B: Tanggal
       3: 160,  // C: Transaction ID
       4: 140,  // D: Nama Client
       5: 140,  // E: KIT Number
       6: 140,  // F: Serial Number
       7: 100,  // G: Paket
       8: 120,  // H: Tipe Pembayaran
-      9: 110,  // I: Nominal
-      10: 130, // J: Jumlah Total
-      11: 150  // K: Total Harian
+      9: 130,  // I: Periode Pembayaran
+      10: 110, // J: Nominal
+      11: 130, // K: Jumlah Total
+      12: 150  // L: Total Harian
     };
     
     for (var col = 1; col <= headers; col++) {
@@ -5445,7 +5469,8 @@ function submitPaymentDataMultiKit(formData) {
           kit.serialNumber || '',     // F: Serial Number
           kit.paket,                  // G: Paket
           kit.tipePembayaran || '',   // H: Tipe Pembayaran (🆕 NOW PER-KIT)
-          kit.nominal                 // I: Nominal (per-KIT nominal)
+          formData.periodeP || '',    // I: Periode Pembayaran (🆕 NEW)
+          kit.nominal                 // J: Nominal (per-KIT nominal)
         ];
 
         // Insert this row
@@ -5535,9 +5560,10 @@ function submitPaymentDataMultiKit(formData) {
           serialNumbers,        // F: Serial Number ← BARU dari Serial Number client
           formData.kitPackages, // G: Paket ← GESER dari F
           formData.selectedKits[0].tipePembayaran || formData.tipe || '',  // H: Tipe Pembayaran (🔧 FIX: Use per-KIT)
-          formData.nominal      // I: Nominal ← GESER dari H
-          // J: Jumlah Total akan dihitung running total ← GESER dari I
-          // K: Total Harian akan di-merge ← GESER dari J
+          formData.periodeP || '', // I: Periode Pembayaran (🆕 NEW)
+          formData.nominal      // J: Nominal ← GESER dari H
+          // K: Jumlah Total akan dihitung running total ← GESER dari I
+          // L: Total Harian akan di-merge ← GESER dari J
         ];
       } else {
         var kit = formData.selectedKits[0];
@@ -5551,15 +5577,16 @@ function submitPaymentDataMultiKit(formData) {
           kit.serialNumber || '', // F: Serial Number ← BARU dari Serial Number client
           kit.paket,           // G: Paket ← GESER dari F
           kit.tipePembayaran || formData.tipe || '',  // H: Tipe Pembayaran (🔧 FIX: Use per-KIT first)
-          kit.nominal || formData.nominal // I: Nominal ← GESER dari H
-          // J: Jumlah Total akan dihitung running total ← GESER dari I
-          // K: Total Harian akan di-merge ← GESER dari J
+          formData.periodeP || '', // I: Periode Pembayaran (🆕 NEW)
+          kit.nominal || formData.nominal // J: Nominal ← GESER dari H
+          // K: Jumlah Total akan dihitung running total ← GESER dari I
+          // L: Total Harian akan di-merge ← GESER dari J
         ];
       }
 
-      // Insert data (sampai kolom I saja, J dan K akan dihitung)
+      // Insert data (sampai kolom J saja, K dan L akan dihitung)
       sheet.getRange(lastRow + 1, 1, 1, rowData.length).setValues([rowData]);
-      Logger.log('✅ Data inserted with NEW 11-column structure');
+      Logger.log('✅ Data inserted with 12-column structure');
       Logger.log('Row data: ' + JSON.stringify(rowData));
     }
     
@@ -5672,17 +5699,17 @@ function checkDuplicateInReportMultiKit(kitNumbers, month, year) {
                 }
               }
               
-              // ✅ MINOR UPDATE: Struktur data dengan kolom baru
               duplicates.push({
                 rowNumber: i + 1,
                 transactionID: data[i][2] || 'No ID',        // C: Transaction ID
                 namaClient: data[i][3] || 'No Name',         // D: Nama Client
-                tanggal: tanggalFormatted,                   
-                kitNumber: data[i][4] || '',                 // E: Serial Number (KIT) ← masih sama
-                serialNumber: data[i][5] || '',              // F: Serial Number ← BARU
-                paket: data[i][6] || '',                     // G: Paket ← GESER dari F
-                tipe: data[i][7] || '',                      // H: Tipe Pembayaran ← GESER dari G
-                nominal: data[i][8] || ''                    // I: Nominal ← GESER dari H
+                tanggal: tanggalFormatted,
+                kitNumber: data[i][4] || '',                 // E: KIT Number
+                serialNumber: data[i][5] || '',              // F: Serial Number
+                paket: data[i][6] || '',                     // G: Paket
+                tipe: data[i][7] || '',                      // H: Tipe Pembayaran
+                periodeP: data[i][8] || '',                  // I: Periode Pembayaran (NEW)
+                nominal: data[i][9] || ''                    // J: Nominal
               });
               duplicateKits.push(kitNumbers[j]);
               break;
@@ -5698,7 +5725,7 @@ function checkDuplicateInReportMultiKit(kitNumbers, month, year) {
       duplicateData: duplicates,
       duplicateKits: duplicateKits,
       checkedSheet: sheet.getName(),
-      reportStructure: 'Updated to 11 columns (A-K)'
+      reportStructure: 'Updated to 12 columns (A-L)'
     };
     
   } catch (error) {
@@ -6328,17 +6355,17 @@ function checkDuplicatesInMonth(month, year) {
               }
             }
             
-            // ✅ MINOR UPDATE: Struktur data dengan kolom baru
             kitDetails[kit].push({
               rowNumber: i + 1,
               transactionID: data[i][2] || 'No ID',        // C: Transaction ID
-              namaClient: data[i][3] || 'No Name',         // D: Nama Client  
-              tanggal: tanggalFormatted,                   
-              kitNumber: kit,                              // E: Serial Number (KIT) ← masih sama
-              serialNumber: data[i][5] || '',              // F: Serial Number ← BARU
-              paket: data[i][6] || '',                     // G: Paket ← GESER dari F
-              tipe: data[i][7] || '',                      // H: Tipe Pembayaran ← GESER dari G
-              nominal: data[i][8] || ''                    // I: Nominal ← GESER dari H
+              namaClient: data[i][3] || 'No Name',         // D: Nama Client
+              tanggal: tanggalFormatted,
+              kitNumber: kit,                              // E: KIT Number
+              serialNumber: data[i][5] || '',              // F: Serial Number
+              paket: data[i][6] || '',                     // G: Paket
+              tipe: data[i][7] || '',                      // H: Tipe Pembayaran
+              periodeP: data[i][8] || '',                  // I: Periode Pembayaran (NEW)
+              nominal: data[i][9] || ''                    // J: Nominal
             });
           }
         }
