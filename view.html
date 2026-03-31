@@ -917,23 +917,27 @@
 
     function expandKitData(data) {
         if (!data || data.length === 0) return [];
-        
+
         const expandedData = [];
-        
+
         data.forEach(row => {
             // Parse semua field yang mungkin memiliki multiple values (dipisah koma)
             let kitNumbers = row.kitNumber ? row.kitNumber.toString().split(',').map(k => k.trim()) : [];
             let serialNumbers = row.serialNumber ? row.serialNumber.toString().split(',').map(s => s.trim()) : [];
             let pakets = row.paket ? row.paket.toString().split(',').map(p => p.trim()) : [];
-            
+            let tipes = row.tipePembayaran ? row.tipePembayaran.toString().split(',').map(t => t.trim()) : [];
+            let periodes = row.periodeP ? row.periodeP.toString().split(',').map(p => p.trim()) : [];
+
             // Pastikan minimal ada 1 element di setiap array
             if (kitNumbers.length === 0) kitNumbers = [''];
             if (serialNumbers.length === 0) serialNumbers = [''];
             if (pakets.length === 0) pakets = [''];
-            
+            if (tipes.length === 0) tipes = [''];
+            if (periodes.length === 0) periodes = [''];
+
             // Cari jumlah maksimal dari semua array
-            const maxLength = Math.max(kitNumbers.length, serialNumbers.length, pakets.length);
-            
+            const maxLength = Math.max(kitNumbers.length, serialNumbers.length, pakets.length, tipes.length, periodes.length);
+
             // Buat satu baris untuk setiap kombinasi
             for (let i = 0; i < maxLength; i++) {
                 expandedData.push({
@@ -943,13 +947,13 @@
                     kitNumber: kitNumbers[i] || '',
                     serialNumber: serialNumbers[i] || '',
                     paket: pakets[i] || '',
-                    tipePembayaran: row.tipePembayaran,
-                    periodeP: row.periodeP || '',
+                    tipePembayaran: tipes[i] || tipes[0] || '',
+                    periodeP: periodes[i] || periodes[0] || '',
                     nominal: row.nominal || ''
                 });
             }
         });
-        
+
         return expandedData;
     }
 
@@ -1139,11 +1143,11 @@
             return;
         }
 
-        // Sort data by date (newest first)
+        // Sort data by transactionID (newest first)
         const sortedData = [...data].sort((a, b) => {
-            const dateA = parseDateString(a.tanggal);
-            const dateB = parseDateString(b.tanggal);
-            return dateB - dateA; // Descending order (newest first)
+            const idA = (a.transactionID || '').toString();
+            const idB = (b.transactionID || '').toString();
+            return idB.localeCompare(idA);
         });
 
         sortedData.forEach(row => {
