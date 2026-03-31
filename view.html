@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlink Report Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+        --bg-primary: rgba(255, 255, 255, 0.7);
+        --bg-secondary: #f0f4ff;
+        --bg-header: linear-gradient(135deg, rgba(102, 126, 234, 0.85) 0%, rgba(118, 75, 162, 0.85) 100%);
+        --bg-gradient: linear-gradient(135deg, rgba(102, 126, 234, 0.75) 0%, rgba(118, 75, 162, 0.75) 100%);
+        --text-primary: #1d1d1f;
+        --text-secondary: #6e6e73;
+        --border-color: rgba(0, 0, 0, 0.08);
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.12);
+        --hover-bg: rgba(245, 245, 247, 0.8);
+        --zebra-even: rgba(255, 255, 255, 0.4);
+        --zebra-odd: rgba(255, 255, 255, 0.2);
+        --accent-primary: #007aff;
+        --accent-secondary: #5856d6;
+        --success-color: #34c759;
+        --info-color: #007aff;
+        --glass-bg: rgba(255, 255, 255, 0.5);
+        --glass-border: rgba(255, 255, 255, 0.3);
+    }
+
+    [data-theme="dark"] {
+        --bg-primary: rgba(28, 28, 30, 0.7);
+        --bg-secondary: #000000;
+        --bg-header: linear-gradient(135deg, rgba(102, 126, 234, 0.85) 0%, rgba(118, 75, 162, 0.85) 100%);
+        --bg-gradient: linear-gradient(135deg, rgba(76, 81, 191, 0.75) 0%, rgba(85, 60, 154, 0.75) 100%);
+        --text-primary: #f5f5f7;
+        --text-secondary: #a1a1a6;
+        --border-color: rgba(255, 255, 255, 0.12);
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.6);
+        --hover-bg: rgba(58, 58, 60, 0.8);
+        --zebra-even: rgba(44, 44, 46, 0.4);
+        --zebra-odd: rgba(28, 28, 30, 0.2);
+        --accent-primary: #0a84ff;
+        --accent-secondary: #5e5ce6;
+        --glass-bg: rgba(28, 28, 30, 0.5);
+        --glass-border: rgba(255, 255, 255, 0.15);
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        transition: all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        animation: fadeIn 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
+        overflow: visible;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .header {
+        background: linear-gradient(135deg, rgba(0, 122, 255, 0.8) 0%, rgba(88, 86, 214, 0.8) 50%, rgba(175, 82, 222, 0.8) 100%);
+        padding: 28px 35px;
+        border-radius: 28px;
+        margin-bottom: 25px;
+        box-shadow: 0 12px 48px rgba(0, 122, 255, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(50px) saturate(200%);
+        -webkit-backdrop-filter: blur(50px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        animation: slideInDown 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
+    }
+
+    .header h1 {
+        font-size: 30px;
+        color: white;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 4px 24px rgba(0, 122, 255, 0.2);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .toggle-filter-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 12px 24px;
+        border-radius: 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        position: relative;
+        z-index: 1;
+    }
+
+    .toggle-filter-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-filter-btn:active {
+        transform: translateY(-1px) scale(0.98);
+    }
+
+    .controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 1;
+    }
+
+    select, input[type="text"], input[type="date"] {
+        padding: 12px 18px;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--glass-bg);
+        color: var(--text-primary);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    select:focus, input:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+        transform: translateY(-2px) scale(1.01);
+        background: var(--bg-primary);
+    }
+
+    .theme-toggle {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 12px 24px;
+        border-radius: 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        position: relative;
+        z-index: 1;
+    }
+
+    .theme-toggle:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .theme-toggle:active {
+        transform: translateY(-1px) scale(0.98);
+    }
+    
+    .stats {
+        background: var(--glass-bg);
+        padding: 25px;
+        border-radius: 24px;
+        margin-bottom: 25px;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        gap: 25px;
+        flex-wrap: wrap;
+        animation: slideIn 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        border: 1px solid var(--glass-border);
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+
+    .stat-item {
+        flex: 1;
+        min-width: 180px;
+        padding: 24px;
+        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        border-radius: 20px;
+        color: white;
+        transition: all 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
+    }
+
+    .stat-item:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 16px 40px rgba(0, 122, 255, 0.3);
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: white;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .filters-section {
+        background: var(--glass-bg);
+        padding: 30px;
+        padding-bottom: 30px;
+        border-radius: 24px;
+        margin-bottom: 25px;
+        /* min-height: 420px; */
+        box-shadow: var(--shadow-lg);
+        animation: slideIn 0.7s cubic-bezier(0.4, 0.0, 0.2, 1);
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        border: 1px solid var(--glass-border);
+        overflow: visible;
+        position: relative;
+        z-index: 100;
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        overflow: visible;
+        position: relative;
+        z-index: 100;
+    }
+
+    .filter-row.compact {
+        margin-bottom: 0;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow: visible;
+        position: relative;
+        z-index: 100;
+    }
+
+    .filter-group.search {
+        flex: 2;
+        min-width: 300px;
+    }
+
+    .filter-group.date {
+        flex: 1;
+        min-width: 180px;
+    }
+
+    .filter-group.inline {
+        flex: 1 1 100%;
+    }
+
+    .filter-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+
+    .search-box {
+        width: 100%;
+        padding: 12px 18px;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--glass-bg);
+        color: var(--text-primary);
+        font-size: 14px;
+        transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    .search-box:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+        transform: translateY(-2px) scale(1.01);
+        background: var(--bg-primary);
+    }
+    
+    /* Dropdown Multi-Select Styles */
+    .dropdown-multiselect {
+        position: relative;
+        min-width: 200px;
+        z-index: 1000;
+    }
+
+    .dropdown-toggle {
+        width: 100%;
+        padding: 12px 18px;
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        font-size: 14px;
+        color: var(--text-primary);
+        font-weight: 500;
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    .dropdown-toggle:hover {
+        border-color: var(--accent-primary);
+        background: var(--hover-bg);
+        transform: translateY(-1px);
+    }
+
+    .dropdown-toggle.active {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+        background: var(--bg-primary);
+    }
+
+    .dropdown-arrow {
+        font-size: 12px;
+        transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    .dropdown-toggle.active .dropdown-arrow {
+        transform: rotate(180deg);
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        background: var(--glass-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 16px 64px rgba(0, 0, 0, 0.2);
+        max-height: 320px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 9999;
+        display: none;
+        animation: dropdownFadeIn 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+    }
+
+    .dropdown-menu::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .dropdown-menu::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+    }
+
+    .dropdown-menu::-webkit-scrollbar-thumb {
+        background: var(--accent-primary);
+        border-radius: 10px;
+    }
+
+    .dropdown-menu::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-secondary);
+    }
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    @keyframes dropdownFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-15px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .dropdown-item {
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+        background: var(--hover-bg);
+        transform: translateX(4px);
+    }
+
+    .dropdown-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--accent-primary);
+        margin: 0;
+    }
+
+    .dropdown-item label {
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        user-select: none;
+        color: var(--text-primary);
+        margin: 0;
+        flex: 1;
+    }
+
+    .dropdown-badge {
+        background: var(--accent-primary);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    .reset-filter-btn {
+        background: linear-gradient(135deg, rgba(255, 59, 48, 0.9) 0%, rgba(255, 45, 85, 0.9) 100%);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 12px 24px;
+        border-radius: 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(255, 59, 48, 0.3);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    .reset-filter-btn:hover {
+        background: linear-gradient(135deg, rgba(255, 59, 48, 1) 0%, rgba(255, 45, 85, 1) 100%);
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 24px rgba(255, 59, 48, 0.4);
+    }
+
+    .reset-filter-btn:active {
+        transform: translateY(-1px) scale(0.98);
+    }
+    
+    .table-container {
+        background: var(--glass-bg);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        animation: slideIn 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        border: 1px solid var(--glass-border);
+        position: relative;
+        z-index: 1;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    thead {
+        background: var(--bg-gradient);
+        color: white;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    th {
+        padding: 18px 16px;
+        text-align: left;
+        font-weight: 700;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    th.col-client { width: 25%; }
+    th.col-date { width: 12%; }
+    th.col-transaction {
+        width: 15%;
+        text-align: center;
+    }
+    th.col-kit { width: 10%; }
+    th.col-serial { width: 12%; }
+    th.col-paket { width: 13%; }
+    th.col-payment { width: 13%; }
+    
+    tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    tbody tr:nth-child(even) {
+        background: var(--zebra-even);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    tbody tr:nth-child(odd) {
+        background: var(--zebra-odd);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    tbody tr:hover {
+        background: var(--hover-bg) !important;
+        transform: translateX(4px) scale(1.005);
+        box-shadow: 0 4px 16px rgba(0, 122, 255, 0.1);
+    }
+
+    td {
+        padding: 16px;
+        font-size: 14px;
+        font-weight: 500;
+        vertical-align: middle;
+    }
+
+    td.transaction-cell {
+        text-align: center;
+    }
+
+    .transaction-id {
+        font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+        font-weight: 600;
+        color: var(--accent-primary);
+        background: rgba(0, 122, 255, 0.1);
+        padding: 6px 12px;
+        border-radius: 10px;
+        display: inline-block;
+        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        border: 1px solid rgba(0, 122, 255, 0.2);
+    }
+
+    .transaction-id:hover {
+        background: rgba(0, 122, 255, 0.15);
+        transform: scale(1.05);
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 60px 40px;
+        color: var(--text-secondary);
+    }
+
+    .spinner {
+        border: 3px solid var(--border-color);
+        border-top: 3px solid var(--accent-primary);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 0.6s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .error {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+        padding: 18px 24px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border-left: 4px solid #dc2626;
+        font-weight: 600;
+        box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
+    }
+
+    [data-theme="dark"] .error {
+        background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+        color: #fecaca;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-secondary);
+    }
+
+    .empty-state svg {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 24px;
+        opacity: 0.4;
+    }
+
+    .empty-state h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+    }
+
+    .empty-state p {
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+    
+    @media (max-width: 768px) {
+        .table-container { overflow-x: auto; }
+        table { min-width: 900px; }
+        .header { flex-direction: column; align-items: stretch; }
+        .controls { justify-content: stretch; }
+        select, input { flex: 1; }
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Starlink Report Viewer</h1>
+            <div class="controls">
+                <select id="monthSelect"></select>
+                <select id="yearSelect"></select>
+                <button class="toggle-filter-btn" onclick="toggleFilters()">
+                    <span id="filterIcon">🔽</span> <span id="filterText">Sembunyikan Filter</span>
+                </button>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+                </button>
+            </div>
+        </div>
+    <div id="errorContainer"></div>
+
+    <div class="stats" id="stats" style="display: none;">
+        <div class="stat-item">
+            <div class="stat-label">Total Transaksi</div>
+            <div class="stat-value" id="totalTransaksi">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Ditampilkan</div>
+            <div class="stat-value" id="filteredTransaksi">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">Periode</div>
+            <div class="stat-value" id="periode">-</div>
+        </div>
+    </div>
+
+    <div class="filters-section" id="filtersSection" style="display: none;">
+        <div class="filter-row">
+            <div class="filter-group search">
+                <label class="filter-label">🔍 Pencarian</label>
+                <input type="text" id="searchBox" class="search-box" placeholder="Cari nama client, transaction ID, kit number, atau serial number...">
+            </div>
+            <div class="filter-group date">
+                <label class="filter-label">📅 Dari Tanggal</label>
+                <input type="date" id="dateFrom" class="search-box">
+            </div>
+            <div class="filter-group date">
+                <label class="filter-label">📅 Sampai Tanggal</label>
+                <input type="date" id="dateTo" class="search-box">
+            </div>
+        </div>
+
+        <div class="filter-row" style="gap: 20px; align-items: flex-end;">
+            <div class="filter-group" style="flex: 1;">
+                <label class="filter-label">📦 Paket</label>
+                <div class="dropdown-multiselect">
+                    <div class="dropdown-toggle" onclick="toggleDropdown('paket')">
+                        <span id="paketLabel">Semua Paket</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </div>
+                    <div class="dropdown-menu" id="paketDropdown"></div>
+                </div>
+            </div>
+            <div class="filter-group" style="flex: 1;">
+                <label class="filter-label">💳 Tipe Pembayaran</label>
+                <div class="dropdown-multiselect">
+                    <div class="dropdown-toggle" onclick="toggleDropdown('payment')">
+                        <span id="paymentLabel">Semua Pembayaran</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </div>
+                    <div class="dropdown-menu" id="paymentDropdown"></div>
+                </div>
+            </div>
+            <button class="reset-filter-btn" onclick="resetFilters()" title="Reset semua filter">
+                🔄 Reset Filter
+            </button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div id="loadingContainer" class="loading">
+            <div class="spinner"></div>
+            <p>Memuat data...</p>
+        </div>
+        <table id="reportTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th class="col-date">Tanggal</th>
+                    <th class="col-transaction">ID Transaksi</th>
+                    <th class="col-client">Nama Client</th>
+                    <th class="col-kit">KIT Number</th>
+                    <th class="col-serial">Serial Number</th>
+                    <th class="col-paket">Paket</th>
+                    <th class="col-payment">Tipe Pembayaran</th>
+                </tr>
+            </thead>
+            <tbody id="reportBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h3>Tidak ada data</h3>
+            <p>Belum ada transaksi untuk periode ini atau filter yang dipilih</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycby4oFR57l_yZmuT2h9wv6_7tr8Yvc98d1mYK8APX0lKku_m8OjksavSsmD1M17LkKN2/exec';
+    
+    let allData = [];
+    let paketOptions = new Set();
+    let paymentOptions = new Set();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeSelects();
+        loadTheme();
+        loadData();
+        setupFilterListeners();
+    });
+
+    function initializeSelects() {
+        const monthSelect = document.getElementById('monthSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const now = new Date();
+        
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        
+        months.forEach((month, index) => {
+            const option = document.createElement('option');
+            option.value = index + 1;
+            option.textContent = month;
+            if (index + 1 === now.getMonth() + 1) option.selected = true;
+            monthSelect.appendChild(option);
+        });
+
+        const currentYear = now.getFullYear();
+        for (let year = currentYear - 2; year <= currentYear + 2; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            if (year === currentYear) option.selected = true;
+            yearSelect.appendChild(option);
+        }
+
+        monthSelect.addEventListener('change', loadData);
+        yearSelect.addEventListener('change', loadData);
+    }
+
+    function setupFilterListeners() {
+        document.getElementById('searchBox').addEventListener('input', applyFilters);
+        document.getElementById('dateFrom').addEventListener('change', applyFilters);
+        document.getElementById('dateTo').addEventListener('change', applyFilters);
+    }
+
+    async function loadData() {
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+        
+        showLoading();
+        clearError();
+
+        try {
+            const response = await fetch(`${API_URL}?action=getReportData&month=${month}&year=${year}`);
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                allData = expandKitData(result.data);
+                extractFilterOptions();
+                createFilterCheckboxes();
+                displayData(allData, month, year);
+            } else {
+                showError(result.message || 'Gagal memuat data');
+                showEmptyState();
+            }
+        } catch (error) {
+            showError('Error: ' + error.message);
+            showEmptyState();
+        }
+    }
+
+    function expandKitData(data) {
+        if (!data || data.length === 0) return [];
+        
+        const expandedData = [];
+        
+        data.forEach(row => {
+            // Parse semua field yang mungkin memiliki multiple values (dipisah koma)
+            let kitNumbers = row.kitNumber ? row.kitNumber.toString().split(',').map(k => k.trim()) : [];
+            let serialNumbers = row.serialNumber ? row.serialNumber.toString().split(',').map(s => s.trim()) : [];
+            let pakets = row.paket ? row.paket.toString().split(',').map(p => p.trim()) : [];
+            
+            // Pastikan minimal ada 1 element di setiap array
+            if (kitNumbers.length === 0) kitNumbers = [''];
+            if (serialNumbers.length === 0) serialNumbers = [''];
+            if (pakets.length === 0) pakets = [''];
+            
+            // Cari jumlah maksimal dari semua array
+            const maxLength = Math.max(kitNumbers.length, serialNumbers.length, pakets.length);
+            
+            // Buat satu baris untuk setiap kombinasi
+            for (let i = 0; i < maxLength; i++) {
+                expandedData.push({
+                    tanggal: row.tanggal,
+                    transactionID: row.transactionID,
+                    namaClient: row.namaClient,
+                    kitNumber: kitNumbers[i] || '',
+                    serialNumber: serialNumbers[i] || '',
+                    paket: pakets[i] || '',
+                    tipePembayaran: row.tipePembayaran
+                });
+            }
+        });
+        
+        return expandedData;
+    }
+
+    function extractFilterOptions() {
+        paketOptions.clear();
+        paymentOptions.clear();
+        
+        allData.forEach(row => {
+            if (row.paket) paketOptions.add(row.paket);
+            if (row.tipePembayaran) paymentOptions.add(row.tipePembayaran);
+        });
+    }
+
+    function createFilterCheckboxes() {
+        const paketContainer = document.getElementById('paketDropdown');
+        const paymentContainer = document.getElementById('paymentDropdown');
+
+        paketContainer.innerHTML = '';
+        paymentContainer.innerHTML = '';
+
+        Array.from(paketOptions).sort().forEach(paket => {
+            const div = document.createElement('div');
+            div.className = 'dropdown-item';
+            div.innerHTML = `
+                <input type="checkbox" id="paket_${paket}" value="${paket}" checked onchange="updateDropdownLabel('paket'); applyFilters();">
+                <label for="paket_${paket}">${paket}</label>
+            `;
+            paketContainer.appendChild(div);
+        });
+
+        Array.from(paymentOptions).sort().forEach(payment => {
+            const div = document.createElement('div');
+            div.className = 'dropdown-item';
+            div.innerHTML = `
+                <input type="checkbox" id="payment_${payment}" value="${payment}" checked onchange="updateDropdownLabel('payment'); applyFilters();">
+                <label for="payment_${payment}">${payment}</label>
+            `;
+            paymentContainer.appendChild(div);
+        });
+
+        updateDropdownLabel('paket');
+        updateDropdownLabel('payment');
+    }
+
+    function toggleDropdown(type) {
+        const dropdown = document.getElementById(type + 'Dropdown');
+        const toggle = dropdown.previousElementSibling;
+        const allDropdowns = document.querySelectorAll('.dropdown-menu');
+        const allToggles = document.querySelectorAll('.dropdown-toggle');
+
+        // Close other dropdowns
+        allDropdowns.forEach(dd => {
+            if (dd !== dropdown) {
+                dd.classList.remove('show');
+            }
+        });
+        allToggles.forEach(tog => {
+            if (tog !== toggle) {
+                tog.classList.remove('active');
+            }
+        });
+
+        // Toggle current dropdown
+        dropdown.classList.toggle('show');
+        toggle.classList.toggle('active');
+    }
+
+    function updateDropdownLabel(type) {
+        const checkboxes = document.querySelectorAll(`#${type}Dropdown input[type="checkbox"]`);
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        const label = document.getElementById(type + 'Label');
+        const total = checkboxes.length;
+
+        if (checked.length === 0) {
+            label.innerHTML = `Tidak ada dipilih`;
+        } else if (checked.length === total) {
+            label.innerHTML = type === 'paket' ? 'Semua Paket' : 'Semua Pembayaran';
+        } else {
+            label.innerHTML = `${checked.length} dipilih <span class="dropdown-badge">${checked.length}</span>`;
+        }
+    }
+
+    function resetFilters() {
+        // Clear search box
+        document.getElementById('searchBox').value = '';
+
+        // Clear date filters
+        document.getElementById('dateFrom').value = '';
+        document.getElementById('dateTo').value = '';
+
+        // Check all checkboxes in both dropdowns
+        document.querySelectorAll('#paketDropdown input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+        });
+        document.querySelectorAll('#paymentDropdown input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+        });
+
+        // Update dropdown labels
+        updateDropdownLabel('paket');
+        updateDropdownLabel('payment');
+
+        // Apply filters to show all data
+        applyFilters();
+
+        // Show visual feedback
+        const resetBtn = event.target.closest('.reset-filter-btn');
+        if (resetBtn) {
+            resetBtn.style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                resetBtn.style.transform = '';
+            }, 600);
+        }
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.dropdown-multiselect')) {
+            document.querySelectorAll('.dropdown-menu').forEach(dd => dd.classList.remove('show'));
+            document.querySelectorAll('.dropdown-toggle').forEach(tog => tog.classList.remove('active'));
+        }
+    });
+
+    function applyFilters() {
+        const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+
+        const selectedPakets = Array.from(document.querySelectorAll('#paketDropdown input:checked')).map(cb => cb.value);
+        const selectedPayments = Array.from(document.querySelectorAll('#paymentDropdown input:checked')).map(cb => cb.value);
+
+        const filteredData = allData.filter(row => {
+            // Search filter
+            const matchesSearch = !searchTerm ||
+                row.namaClient.toLowerCase().includes(searchTerm) ||
+                row.transactionID.toLowerCase().includes(searchTerm) ||
+                row.kitNumber.toLowerCase().includes(searchTerm) ||
+                row.serialNumber.toLowerCase().includes(searchTerm);
+
+            // Date filter - FIXED: Now properly handles same start and end date
+            let matchesDate = true;
+            if (dateFrom || dateTo) {
+                const rowDate = parseDateString(row.tanggal);
+                if (dateFrom) {
+                    const fromDate = new Date(dateFrom);
+                    fromDate.setHours(0, 0, 0, 0); // Start of day
+                    matchesDate = matchesDate && rowDate >= fromDate;
+                }
+                if (dateTo) {
+                    const toDate = new Date(dateTo);
+                    toDate.setHours(23, 59, 59, 999); // End of day - this fixes the bug!
+                    matchesDate = matchesDate && rowDate <= toDate;
+                }
+            }
+
+            // Paket filter
+            const matchesPaket = selectedPakets.includes(row.paket);
+
+            // Payment filter
+            const matchesPayment = selectedPayments.includes(row.tipePembayaran);
+
+            return matchesSearch && matchesDate && matchesPaket && matchesPayment;
+        });
+
+        displayFilteredData(filteredData);
+    }
+
+    function parseDateString(dateStr) {
+        // Assumes format DD/MM/YYYY or similar
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            const date = new Date(parts[2], parts[1] - 1, parts[0]);
+            date.setHours(0, 0, 0, 0); // Normalize to start of day
+            return date;
+        }
+        const date = new Date(dateStr);
+        date.setHours(0, 0, 0, 0); // Normalize to start of day
+        return date;
+    }
+
+    function displayFilteredData(data) {
+        const tbody = document.getElementById('reportBody');
+        tbody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            showEmptyState();
+            return;
+        }
+
+        // Sort data by date (newest first)
+        const sortedData = [...data].sort((a, b) => {
+            const dateA = parseDateString(a.tanggal);
+            const dateB = parseDateString(b.tanggal);
+            return dateB - dateA; // Descending order (newest first)
+        });
+
+        sortedData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.tanggal}</td>
+                <td class="transaction-cell"><span class="transaction-id">${row.transactionID}</span></td>
+                <td>${row.namaClient}</td>
+                <td>${row.kitNumber}</td>
+                <td>${row.serialNumber}</td>
+                <td>${row.paket}</td>
+                <td>${row.tipePembayaran}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('filteredTransaksi').textContent = data.length;
+        document.getElementById('stats').style.display = 'flex';
+        document.getElementById('reportTable').style.display = 'table';
+        document.getElementById('loadingContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+    }
+
+    function displayData(data, month, year) {
+        if (!data || data.length === 0) {
+            showEmptyState();
+            return;
+        }
+
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        document.getElementById('totalTransaksi').textContent = data.length;
+        document.getElementById('filteredTransaksi').textContent = data.length;
+        document.getElementById('periode').textContent = `${months[month - 1]} ${year}`;
+        
+        document.getElementById('filtersSection').style.display = 'block';
+        displayFilteredData(data);
+    }
+
+    function showLoading() {
+        document.getElementById('loadingContainer').style.display = 'block';
+        document.getElementById('reportTable').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('stats').style.display = 'none';
+        document.getElementById('filtersSection').style.display = 'none';
+    }
+
+    function showEmptyState() {
+        document.getElementById('emptyState').style.display = 'block';
+        document.getElementById('loadingContainer').style.display = 'none';
+        document.getElementById('reportTable').style.display = 'none';
+    }
+
+    function showError(message) {
+        const errorContainer = document.getElementById('errorContainer');
+        errorContainer.innerHTML = `<div class="error">${message}</div>`;
+        setTimeout(() => errorContainer.innerHTML = '', 5000);
+    }
+
+    function clearError() {
+        document.getElementById('errorContainer').innerHTML = '';
+    }
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        const icon = document.getElementById('themeIcon');
+        const text = document.getElementById('themeText');
+        if (newTheme === 'dark') {
+            icon.textContent = '☀️';
+            text.textContent = 'Light Mode';
+        } else {
+            icon.textContent = '🌙';
+            text.textContent = 'Dark Mode';
+        }
+    }
+
+    function toggleFilters() {
+        const filtersSection = document.getElementById('filtersSection');
+        const filterIcon = document.getElementById('filterIcon');
+        const filterText = document.getElementById('filterText');
+        const isVisible = filtersSection.style.display !== 'none';
+        
+        if (isVisible) {
+            filtersSection.style.display = 'none';
+            filterIcon.textContent = '🔼';
+            filterText.textContent = 'Tampilkan Filter';
+        } else {
+            filtersSection.style.display = 'block';
+            filterIcon.textContent = '🔽';
+            filterText.textContent = 'Sembunyikan Filter';
+        }
+    }
+
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        const icon = document.getElementById('themeIcon');
+        const text = document.getElementById('themeText');
+        if (savedTheme === 'dark') {
+            icon.textContent = '☀️';
+            text.textContent = 'Light Mode';
+        }
+    }
+</script>
+</body>
+</html>
