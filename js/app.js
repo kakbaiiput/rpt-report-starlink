@@ -2730,48 +2730,64 @@ function handleValidationError(error) {
 function showConfirmationModal() {
     const confirmationModal = document.getElementById('confirmationModal');
     const confirmationDetails = document.getElementById('confirmationDetails');
-    
+
     if (!confirmationModal || !confirmationDetails) {
         CONFIG.warn('⚠️ Confirmation modal not found, submitting directly...');
         confirmAndSubmit();
         return;
     }
-    
+
     const tanggal = getFormDateValue();
-    const nama = elements.clientNameText.textContent.trim();
-
-    // Calculate total nominal from selectedKits
     const totalNominal = selectedKits.reduce((sum, kit) => sum + (kit.nominal || 0), 0);
-
     const formattedDate = formatDateForDisplay(tanggal);
     const formattedNominal = new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0
+        style: 'currency', currency: 'IDR', minimumFractionDigits: 0
     }).format(totalNominal);
-    
-    const kitDetails = selectedKits.map((kit, index) => {
-        const serialInfo = kit.serialNumber ? ` | SN: ${kit.serialNumber}` : '';
-        return `<li><strong>🛰️ ${kit.kitNumber}${serialInfo}</strong> (${kit.paket})</li>`;
+
+    const kitCards = selectedKits.map((kit) => {
+        const tipeIcon = kit.tipePembayaran === 'Aktivasi' ? '🚀' : kit.tipePembayaran === 'Perpanjangan' ? '🔄' : kit.tipePembayaran === 'Migrasi' ? '🔀' : '❓';
+        const nominalFmt = kit.nominal ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(kit.nominal) : '-';
+        const clientLabel = kit.clientName ? `<div style="color:#94a3b8;font-size:11px;margin-top:5px;">👤 ${kit.clientName}</div>` : '';
+        return `
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="color:#60a5fa;font-size:13px;font-weight:700;">🛰️ ${kit.kitNumber}</span>
+                    <span style="color:#10b981;font-size:13px;font-weight:700;">${nominalFmt}</span>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <span style="background:#1e3a8a;color:#93c5fd;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${kit.paket || '-'}</span>
+                    <span style="background:#451a03;color:#fbbf24;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${tipeIcon} ${kit.tipePembayaran || '-'}</span>
+                    <span style="background:#064e3b;color:#34d399;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">📆 ${kit.periodeP || '-'}</span>
+                </div>
+                ${clientLabel}
+            </div>
+        `;
     }).join('');
-    
+
     confirmationDetails.innerHTML = `
-        <div style="background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-            <p><strong>📅 Tanggal:</strong> ${formattedDate}</p>
-            <p><strong>💰 Nominal:</strong> ${formattedNominal}</p>
-            <p><strong>🛰️ Total KIT:</strong> ${selectedKits.length}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Tanggal</div>
+                <div style="color:#f1f5f9;font-size:12px;font-weight:700;">📅 ${formattedDate}</div>
+            </div>
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Total Nominal</div>
+                <div style="color:#10b981;font-size:12px;font-weight:700;">${formattedNominal}</div>
+            </div>
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;text-align:center;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Total KIT</div>
+                <div style="color:#60a5fa;font-size:12px;font-weight:700;">🛰️ ${selectedKits.length} KIT</div>
+            </div>
         </div>
-        <div style="background: #334155; padding: 12px; border-radius: 8px;">
-            <p style="margin-bottom: 8px;"><strong>📦 Detail KIT:</strong></p>
-            <ul style="margin-left: 20px; color: #cbd5e1;">
-                ${kitDetails}
-            </ul>
+        <div style="background:#0f172a;border-radius:8px;padding:10px;border:1px solid #1e293b;">
+            <div style="color:#94a3b8;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📦 Detail KIT</div>
+            ${kitCards}
         </div>
     `;
-    
+
     resetModalState();
     confirmationModal.style.display = 'flex';
-    
+
     CONFIG.log('✅ Confirmation modal opened with enhanced KIT details');
 }
 
