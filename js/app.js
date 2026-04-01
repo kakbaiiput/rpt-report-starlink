@@ -2581,9 +2581,13 @@ function handleValidationSuccess(data) {
         const newKits = data.validation.data.allKits || [];
         const clientName = data.validation.data.nama;
 
-        // Add client name to each new KIT
+        // Add client name and periode defaults to each new KIT
+        const defPeriode = getCurrentPeriodeDefault();
         newKits.forEach(kit => {
             kit.clientName = clientName;
+            kit.periodeBulan = kit.periodeBulan || defPeriode.bulan;
+            kit.periodeTahun = kit.periodeTahun || defPeriode.tahun;
+            kit.periodeP = kit.periodeP || buildPeriodeString(defPeriode.bulan, defPeriode.tahun);
         });
 
         // Check if we already have KITs (from previous client selections)
