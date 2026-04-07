@@ -585,8 +585,8 @@ let isKitValid = false;
 let availableKits = [];
 let selectedKits = [];
 
-// 🆕 BULK INPUT STATE
-let inputMode = 'single';   // 'single' | 'bulk'
+// 🆕 BULK INPUT STATE (bulk is now always the default input mode)
+let inputMode = 'bulk';     // always 'bulk'
 let fillMode  = 'bulk';     // 'bulk'   | 'individual'
 let bulkValidating = false;
 let validationTimeout;
@@ -1680,9 +1680,8 @@ function resetFormAfterSuccess() {
     selectedKits = [];
 
     // Reset bulk input state
-    inputMode = 'single'; fillMode = 'bulk'; bulkValidating = false;
-    window.inputMode = 'single'; window.fillMode = 'bulk';
-    switchInputMode('single');
+    inputMode = 'bulk'; fillMode = 'bulk'; bulkValidating = false;
+    window.inputMode = 'bulk'; window.fillMode = 'bulk';
     const bulkTextarea = document.getElementById('bulkKitTextarea');
     if (bulkTextarea) bulkTextarea.value = '';
     const bulkRC = document.getElementById('bulkResultsContainer');
@@ -3776,11 +3775,8 @@ async function handleBulkValidation() {
 
     isKitValid = availableKits.length > 0;
 
-    // Show KIT selection area
+    // In bulk mode, don't show the KIT card section in Step 2 — cards appear in Step 3 if needed
     if (availableKits.length > 0) {
-        showKitSelection();
-        updateKitDisplay();
-        updateKitSummary();
         if (statusEl) statusEl.textContent = '';
     } else {
         if (statusEl) statusEl.textContent = '⚠️ Tidak ada KIT valid ditemukan';
@@ -3849,17 +3845,16 @@ function initBulkFillSection() {
 }
 
 function initBulkInputUI() {
-    const singleBtn      = document.getElementById('singleModeBtn');
-    const bulkBtn        = document.getElementById('bulkModeBtn');
-    const validateBtn    = document.getElementById('validateBulkBtn');
-    const clearBtn       = document.getElementById('clearBulkBtn');
-    const bulkFillModeBtn     = document.getElementById('bulkFillModeBtn');
-    const individualFillModeBtn = document.getElementById('individualFillModeBtn');
-    const applyBtn       = document.getElementById('applyBulkFillBtn');
-    const nominalInput   = document.getElementById('bulkNominalInput');
+    // Bulk is now always the input mode — no toggle needed
+    window.inputMode = 'bulk';
 
-    if (singleBtn)   singleBtn.addEventListener('click', () => switchInputMode('single'));
-    if (bulkBtn)     bulkBtn.addEventListener('click',   () => switchInputMode('bulk'));
+    const validateBtn = document.getElementById('validateBulkBtn');
+    const clearBtn    = document.getElementById('clearBulkBtn');
+    const bulkFillModeBtn      = document.getElementById('bulkFillModeBtn');
+    const individualFillModeBtn = document.getElementById('individualFillModeBtn');
+    const applyBtn    = document.getElementById('applyBulkFillBtn');
+    const nominalInput = document.getElementById('bulkNominalInput');
+
     if (validateBtn) validateBtn.addEventListener('click', handleBulkValidation);
     if (clearBtn)    clearBtn.addEventListener('click', () => {
         const ta = document.getElementById('bulkKitTextarea');
@@ -3871,10 +3866,9 @@ function initBulkInputUI() {
         const se = document.getElementById('bulkValidateStatus');
         if (se) se.textContent = '';
         availableKits = []; selectedKits = []; window.selectedKits = [];
-        hideKitSelection();
         if (window.stepperNav) window.stepperNav.updateNavigationButtons();
     });
-    if (bulkFillModeBtn)      bulkFillModeBtn.addEventListener('click',      () => switchFillMode('bulk'));
+    if (bulkFillModeBtn)       bulkFillModeBtn.addEventListener('click',      () => switchFillMode('bulk'));
     if (individualFillModeBtn) individualFillModeBtn.addEventListener('click', () => switchFillMode('individual'));
     if (applyBtn)    applyBtn.addEventListener('click', applyBulkFillToAll);
     if (nominalInput) {

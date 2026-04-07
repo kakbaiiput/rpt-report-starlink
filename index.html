@@ -152,23 +152,8 @@
 <p>Input nomor KIT atau nama client untuk memilih KIT yang akan diperpanjang</p>
 </div>
 
-<!-- Input Mode Toggle -->
-<div class="form-group" id="inputModeToggleGroup">
-<label>Mode Input</label>
-<div style="display:flex;gap:0;border:2px solid #475569;border-radius:8px;overflow:hidden;max-width:400px;">
-  <button type="button" id="singleModeBtn"
-    style="flex:1;padding:10px 16px;border:none;background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:white;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.3s;">
-    📱 Single KIT
-  </button>
-  <button type="button" id="bulkModeBtn"
-    style="flex:1;padding:10px 16px;border:none;background:transparent;color:#94a3b8;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.3s;">
-    📋 Bulk Input
-  </button>
-</div>
-</div>
-
-<!-- Search Input Section -->
-<div class="form-group">
+<!-- Search Input Section (hidden — bulk textarea replaces this) -->
+<div class="form-group" style="display:none;">
 <div id="kitNumberSection">
 <label for="nomorKit">Nomor KIT / Serial Number *</label>
 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -210,8 +195,8 @@
 <div class="loading" id="clientNamesLoading">Loading clients...</div>
 </div>
 
-<!-- Bulk Input Section (hidden by default) -->
-<div id="bulkInputSection" style="display:none;">
+<!-- Bulk Input Section (always visible) -->
+<div id="bulkInputSection" style="display:block;">
   <label style="display:block;color:#f1f5f9;font-weight:600;margin-bottom:8px;">Nomor KIT / Serial Number (satu per baris) *</label>
   <textarea id="bulkKitTextarea" rows="8"
     placeholder="Masukkan nomor KIT, satu per baris&#10;Contoh:&#10;KIT304096716&#10;KIT304096717&#10;KIT304096718"
@@ -244,8 +229,8 @@
 <div class="loading" id="kitLoading">Memvalidasi nomor KIT...</div>
 <div class="validation-message" id="kitValidation"></div>
 
-<!-- KIT Selection -->
-<div class="kit-selection-section" id="kitSelectionSection">
+<!-- KIT Selection (hidden in bulk mode — cards rendered in Step 3 instead) -->
+<div class="kit-selection-section" id="kitSelectionSection" style="display:none;">
 <h4>📋 Pilih KIT yang akan diperpanjang:</h4>
 <div class="select-all-controls">
 <button type="button" class="btn btn-secondary btn-small" id="selectAllBtn">✅ Pilih Semua</button>
