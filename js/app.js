@@ -584,6 +584,11 @@ let validationResult = null;
 let isKitValid = false;
 let availableKits = [];
 let selectedKits = [];
+
+// 🆕 BULK INPUT STATE
+let inputMode = 'single';   // 'single' | 'bulk'
+let fillMode  = 'bulk';     // 'bulk'   | 'individual'
+let bulkValidating = false;
 let validationTimeout;
 let allClientNames = [];
 let filteredClientNames = [];
@@ -1000,6 +1005,9 @@ function setupEventListeners() {
 
     // Mobile responsive
     setupMobileResponsive();
+
+    // 🆕 Bulk input UI
+    initBulkInputUI();
 }
 
 // 🚫 ENHANCED: Form submit handler dengan protection double POST
@@ -1671,6 +1679,19 @@ function resetFormAfterSuccess() {
     availableKits = [];
     selectedKits = [];
 
+    // Reset bulk input state
+    inputMode = 'single'; fillMode = 'bulk'; bulkValidating = false;
+    window.inputMode = 'single'; window.fillMode = 'bulk';
+    switchInputMode('single');
+    const bulkTextarea = document.getElementById('bulkKitTextarea');
+    if (bulkTextarea) bulkTextarea.value = '';
+    const bulkRC = document.getElementById('bulkResultsContainer');
+    if (bulkRC) bulkRC.style.display = 'none';
+    const bulkPC = document.getElementById('bulkProgressContainer');
+    if (bulkPC) bulkPC.style.display = 'none';
+    const bulkFS = document.getElementById('bulkFillSection');
+    if (bulkFS) bulkFS.style.display = 'none';
+
     // Reset payment type dropdown to empty state
     const paymentTypeSelected = document.getElementById('paymentTypeSelected');
     if (paymentTypeSelected) {
@@ -1733,10 +1754,13 @@ function resetFormAfterSuccess() {
 
 async function handleSearchModeChange() {
     const selectedMode = elements.searchMode.value;
-    
+
     // Reset state
     resetValidationState();
-    
+
+    // In bulk mode, section visibility is controlled by switchInputMode — skip toggling
+    if (inputMode === 'bulk') return;
+
     if (selectedMode === 'name') {
         elements.kitNumberSection.style.display = 'none';
         elements.clientNameSection.style.display = 'block';
@@ -3507,6 +3531,360 @@ function updatePreview() {
     updateButtonStates();
 }
 
+// ============================================================
+// 🆕 BULK INPUT FEATURE
+// ============================================================
+
+function switchInputMode(mode) {
+    inputMode = mode;
+    window.inputMode = mode;
+
+    const singleBtn = document.getElementById('singleModeBtn');
+    const bulkBtn   = document.getElementById('bulkModeBtn');
+    const kitNumberSection  = document.getElementById('kitNumberSection');
+    const clientNameSection = document.getElementById('clientNameSection');
+    const bulkInputSection  = document.getElementById('bulkInputSection');
+
+    const activeStyle   = 'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)';
+    const inactiveStyle = 'transparent';
+    const activeColor   = 'white';
+    const inactiveColor = '#94a3b8';
+
+    if (mode === 'bulk') {
+        singleBtn.style.background = inactiveStyle;
+        singleBtn.style.color      = inactiveColor;
+        bulkBtn.style.background   = activeStyle;
+        bulkBtn.style.color        = activeColor;
+        if (kitNumberSection)  kitNumberSection.style.display  = 'none';
+        if (clientNameSection) clientNameSection.style.display = 'none';
+        if (bulkInputSection)  bulkInputSection.style.display  = 'block';
+    } else {
+        singleBtn.style.background = activeStyle;
+        singleBtn.style.color      = activeColor;
+        bulkBtn.style.background   = inactiveStyle;
+        bulkBtn.style.color        = inactiveColor;
+        if (bulkInputSection) bulkInputSection.style.display = 'none';
+        // Restore single-mode sections based on current searchMode
+        const searchMode = document.getElementById('searchMode')?.value || 'kit';
+        if (kitNumberSection)  kitNumberSection.style.display  = searchMode === 'kit'  ? 'block' : 'none';
+        if (clientNameSection) clientNameSection.style.display = searchMode === 'name' ? 'block' : 'none';
+        // Reset bulk UI
+        const progressContainer = document.getElementById('bulkProgressContainer');
+        const resultsContainer  = document.getElementById('bulkResultsContainer');
+        if (progressContainer) progressContainer.style.display = 'none';
+        if (resultsContainer)  resultsContainer.style.display  = 'none';
+        const statusEl = document.getElementById('bulkValidateStatus');
+        if (statusEl) statusEl.textContent = '';
+    }
+
+    if (window.stepperNav) window.stepperNav.updateNavigationButtons();
+}
+
+function switchFillMode(mode) {
+    fillMode = mode;
+    window.fillMode = mode;
+
+    const bulkFillBtn       = document.getElementById('bulkFillModeBtn');
+    const indFillBtn        = document.getElementById('individualFillModeBtn');
+    const bulkFillForm      = document.getElementById('bulkFillForm');
+    const kitListStep3      = document.getElementById('kitListStep3');
+
+    const activeStyle   = 'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)';
+    const inactiveStyle = 'transparent';
+
+    if (mode === 'bulk') {
+        if (bulkFillBtn) { bulkFillBtn.style.background = activeStyle; bulkFillBtn.style.color = 'white'; }
+        if (indFillBtn)  { indFillBtn.style.background  = inactiveStyle; indFillBtn.style.color = '#94a3b8'; }
+        if (bulkFillForm) bulkFillForm.style.display = 'block';
+        if (kitListStep3) kitListStep3.style.display = 'none';
+    } else {
+        if (bulkFillBtn) { bulkFillBtn.style.background = inactiveStyle; bulkFillBtn.style.color = '#94a3b8'; }
+        if (indFillBtn)  { indFillBtn.style.background  = activeStyle; indFillBtn.style.color = 'white'; }
+        if (bulkFillForm) bulkFillForm.style.display = 'none';
+        if (kitListStep3) {
+            kitListStep3.style.display = 'block';
+            renderKitCardsInStep3();
+        }
+    }
+}
+
+function renderKitCardsInStep3() {
+    const container = document.getElementById('kitListStep3');
+    if (!container) return;
+    // Re-render kit cards but target kitListStep3 container
+    // We temporarily swap the target, render, then restore
+    const originalList = document.getElementById('kitList');
+    if (!originalList) { container.innerHTML = ''; return; }
+    container.innerHTML = originalList.innerHTML;
+    // Attach event listeners to cloned elements
+    container.querySelectorAll('.nominal-input-per-kit').forEach(input => {
+        const idx = parseInt(input.dataset.kitIndex);
+        input.addEventListener('input', function() { handleKitNominalInput(idx, this.value); });
+        input.addEventListener('focus', function() { if (this.value === '0' || this.value === '') this.value = ''; });
+        input.addEventListener('blur',  function() { if (!this.value) { handleKitNominalInput(idx, '0'); } });
+    });
+    container.querySelectorAll('.payment-type-per-kit').forEach(sel => {
+        const idx = parseInt(sel.dataset.kitIndex);
+        sel.addEventListener('change', function() { handleKitPaymentTypeChange(idx, this.value); });
+    });
+    container.querySelectorAll('.periode-bulan-per-kit').forEach(sel => {
+        const idx = parseInt(sel.dataset.kitIndex);
+        sel.addEventListener('change', function() {
+            handleKitPeriodeChange(idx, parseInt(this.value), availableKits[idx].periodeTahun);
+        });
+    });
+    container.querySelectorAll('.periode-tahun-per-kit').forEach(sel => {
+        const idx = parseInt(sel.dataset.kitIndex);
+        sel.addEventListener('change', function() {
+            handleKitPeriodeChange(idx, availableKits[idx].periodeBulan, parseInt(this.value));
+        });
+    });
+}
+
+async function handleBulkValidation() {
+    if (bulkValidating) return;
+
+    const textarea = document.getElementById('bulkKitTextarea');
+    const lines = textarea.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+    if (lines.length === 0) {
+        showBanner('❌ Masukkan minimal 1 nomor KIT', 'error');
+        return;
+    }
+
+    bulkValidating = true;
+    const validateBtn = document.getElementById('validateBulkBtn');
+    if (validateBtn) validateBtn.disabled = true;
+
+    const progressContainer = document.getElementById('bulkProgressContainer');
+    const progressBar  = document.getElementById('bulkProgressBar');
+    const progressText = document.getElementById('bulkProgressText');
+    const resultsContainer  = document.getElementById('bulkResultsContainer');
+    const resultsSummary    = document.getElementById('bulkResultsSummary');
+    const resultsList       = document.getElementById('bulkResultsList');
+    const statusEl          = document.getElementById('bulkValidateStatus');
+
+    if (progressContainer) progressContainer.style.display = 'block';
+    if (resultsContainer)  resultsContainer.style.display  = 'none';
+
+    // Get date params
+    const selectedDate = getFormDateValue();
+    let selectedMonth = null, selectedYear = null;
+    if (selectedDate) {
+        const parts = selectedDate.split('-');
+        selectedMonth = parseInt(parts[1]);
+        selectedYear  = parseInt(parts[0]);
+    }
+
+    // Reset existing kit data for fresh bulk session
+    availableKits = [];
+    selectedKits  = [];
+    window.selectedKits = selectedKits;
+
+    const valid = [], invalid = [], duplicate = [];
+    const resultItems = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const kitNum = lines[i];
+        const pct = Math.round(((i) / lines.length) * 100);
+        if (progressBar)  progressBar.style.width = pct + '%';
+        if (progressText) progressText.textContent = `Memvalidasi... ${i + 1}/${lines.length} — ${kitNum}`;
+
+        try {
+            const data = await api.validateKitMulti(kitNum, selectedMonth, selectedYear);
+            if (data.validation && data.validation.status === 'found') {
+                const isDup = data.duplicate?.hasDuplicate &&
+                              data.duplicate?.duplicateKits?.some(k =>
+                                  k === kitNum || (data.validation.data?.allKits || []).some(ak => ak.kitNumber === k)
+                              );
+                if (isDup) {
+                    duplicate.push({ kitNum, data });
+                    resultItems.push({ kitNum, status: 'duplicate' });
+                } else {
+                    valid.push({ kitNum, data });
+                    resultItems.push({ kitNum, status: 'valid' });
+                }
+                // Add to availableKits
+                const kits = data.validation.data.allKits || [];
+                const clientName = data.validation.data.nama || '';
+                const defP = getCurrentPeriodeDefault();
+                kits.forEach(kit => {
+                    const exists = availableKits.some(k => k.kitNumber === kit.kitNumber);
+                    if (!exists) {
+                        availableKits.push({
+                            ...kit,
+                            clientName,
+                            isSelected: true,
+                            nominal: 0,
+                            tipePembayaran: '',
+                            periodeBulan: defP.bulan,
+                            periodeTahun: defP.tahun,
+                            periodeP: buildPeriodeString(defP.bulan, defP.tahun),
+                            isDuplicate: isDup
+                        });
+                    }
+                });
+            } else {
+                invalid.push(kitNum);
+                resultItems.push({ kitNum, status: 'notfound' });
+            }
+        } catch (e) {
+            invalid.push(kitNum);
+            resultItems.push({ kitNum, status: 'notfound' });
+        }
+    }
+
+    if (progressBar)  progressBar.style.width = '100%';
+    if (progressText) progressText.textContent = `Selesai — ${lines.length}/${lines.length}`;
+
+    // Build result list HTML
+    if (resultsList) {
+        resultsList.innerHTML = resultItems.map(r => {
+            const icon  = r.status === 'valid' ? '✅' : r.status === 'duplicate' ? '⚠️' : '❌';
+            const color = r.status === 'valid' ? '#34d399' : r.status === 'duplicate' ? '#fbbf24' : '#f87171';
+            const label = r.status === 'valid' ? 'Valid' : r.status === 'duplicate' ? 'Duplikat' : 'Tidak Ditemukan';
+            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #1e293b;">
+                <span style="font-size:13px;">${icon}</span>
+                <span style="font-family:'Roboto Mono',monospace;font-size:12px;color:#f1f5f9;flex:1;">${r.kitNum}</span>
+                <span style="font-size:11px;font-weight:600;color:${color};">${label}</span>
+            </div>`;
+        }).join('');
+    }
+
+    // Summary badges
+    if (resultsSummary) {
+        resultsSummary.innerHTML =
+            `<span style="background:#064e3b;color:#34d399;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">✅ Valid: ${valid.length + duplicate.length}</span>` +
+            `<span style="background:#450a0a;color:#fca5a5;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">❌ Tidak Ditemukan: ${invalid.length}</span>` +
+            (duplicate.length > 0 ? `<span style="background:#451a03;color:#fbbf24;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">⚠️ Duplikat: ${duplicate.length}</span>` : '');
+    }
+
+    if (resultsContainer) resultsContainer.style.display = 'block';
+
+    // Update selectedKits
+    selectedKits = availableKits.filter(k => k.isSelected);
+    window.selectedKits = selectedKits;
+
+    // Update clientNameText
+    const uniqueNames = [...new Set(availableKits.map(k => k.clientName).filter(Boolean))];
+    const clientNameText = document.getElementById('clientNameText');
+    if (clientNameText && uniqueNames.length > 0) {
+        clientNameText.textContent = uniqueNames.length === 1 ? uniqueNames[0] : `${uniqueNames.length} clients (${uniqueNames.join(', ')})`;
+        document.getElementById('namaClient')?.classList.add('filled');
+        document.getElementById('namaClientDisplay')?.classList.add('filled');
+    }
+
+    isKitValid = availableKits.length > 0;
+
+    // Show KIT selection area
+    if (availableKits.length > 0) {
+        showKitSelection();
+        updateKitDisplay();
+        updateKitSummary();
+        if (statusEl) statusEl.textContent = '';
+    } else {
+        if (statusEl) statusEl.textContent = '⚠️ Tidak ada KIT valid ditemukan';
+    }
+
+    if (invalid.length > 0 && availableKits.length > 0) {
+        showBanner(`⚠️ ${invalid.length} KIT tidak ditemukan, ${availableKits.length} KIT valid siap diproses`, 'warning');
+    }
+
+    bulkValidating = false;
+    if (validateBtn) validateBtn.disabled = false;
+    if (window.stepperNav) window.stepperNav.updateNavigationButtons();
+}
+
+function applyBulkFillToAll() {
+    const tipe    = document.getElementById('bulkTipeSelect')?.value || '';
+    const nominal = parseInt((document.getElementById('bulkNominalInput')?.value || '').replace(/\D/g, '')) || 0;
+    const bulan   = parseInt(document.getElementById('bulkBulanSelect')?.value) || getCurrentPeriodeDefault().bulan;
+    const tahun   = parseInt(document.getElementById('bulkTahunSelect')?.value) || getCurrentPeriodeDefault().tahun;
+    const statusEl = document.getElementById('bulkFillStatus');
+
+    if (!tipe) {
+        if (statusEl) { statusEl.textContent = '❌ Pilih tipe pembayaran terlebih dahulu'; statusEl.style.color = '#f87171'; }
+        return;
+    }
+    if (nominal < 1) {
+        if (statusEl) { statusEl.textContent = '❌ Nominal harus minimal Rp 1'; statusEl.style.color = '#f87171'; }
+        return;
+    }
+
+    const periodeStr = buildPeriodeString(bulan, tahun);
+    availableKits.forEach((kit, idx) => {
+        kit.tipePembayaran = tipe;
+        kit.nominal        = nominal;
+        kit.periodeBulan   = bulan;
+        kit.periodeTahun   = tahun;
+        kit.periodeP       = periodeStr;
+    });
+    selectedKits = availableKits.filter(k => k.isSelected);
+    window.selectedKits = selectedKits;
+    updateKitDisplay();
+    updateKitSummary();
+    updateStep3Summary();
+
+    if (statusEl) {
+        statusEl.textContent = `✅ Diterapkan ke ${availableKits.length} KIT — ${tipe} · Rp ${nominal.toLocaleString('id-ID')} · ${periodeStr}`;
+        statusEl.style.color = '#34d399';
+    }
+    if (window.stepperNav) window.stepperNav.updateNavigationButtons();
+}
+
+function initBulkFillSection() {
+    // Called by stepper when entering step 3 in bulk mode
+    const section = document.getElementById('bulkFillSection');
+    if (!section) return;
+    if (inputMode !== 'bulk') { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    // Populate bulan/tahun selects
+    const bulanSel = document.getElementById('bulkBulanSelect');
+    const tahunSel = document.getElementById('bulkTahunSelect');
+    const def = getCurrentPeriodeDefault();
+    if (bulanSel) bulanSel.innerHTML = generateBulanOptions(def.bulan);
+    if (tahunSel) tahunSel.innerHTML = generateTahunOptions(def.tahun);
+    // Default fill mode
+    switchFillMode('bulk');
+}
+
+function initBulkInputUI() {
+    const singleBtn      = document.getElementById('singleModeBtn');
+    const bulkBtn        = document.getElementById('bulkModeBtn');
+    const validateBtn    = document.getElementById('validateBulkBtn');
+    const clearBtn       = document.getElementById('clearBulkBtn');
+    const bulkFillModeBtn     = document.getElementById('bulkFillModeBtn');
+    const individualFillModeBtn = document.getElementById('individualFillModeBtn');
+    const applyBtn       = document.getElementById('applyBulkFillBtn');
+    const nominalInput   = document.getElementById('bulkNominalInput');
+
+    if (singleBtn)   singleBtn.addEventListener('click', () => switchInputMode('single'));
+    if (bulkBtn)     bulkBtn.addEventListener('click',   () => switchInputMode('bulk'));
+    if (validateBtn) validateBtn.addEventListener('click', handleBulkValidation);
+    if (clearBtn)    clearBtn.addEventListener('click', () => {
+        const ta = document.getElementById('bulkKitTextarea');
+        if (ta) ta.value = '';
+        const rc = document.getElementById('bulkResultsContainer');
+        if (rc) rc.style.display = 'none';
+        const pc = document.getElementById('bulkProgressContainer');
+        if (pc) pc.style.display = 'none';
+        const se = document.getElementById('bulkValidateStatus');
+        if (se) se.textContent = '';
+        availableKits = []; selectedKits = []; window.selectedKits = [];
+        hideKitSelection();
+        if (window.stepperNav) window.stepperNav.updateNavigationButtons();
+    });
+    if (bulkFillModeBtn)      bulkFillModeBtn.addEventListener('click',      () => switchFillMode('bulk'));
+    if (individualFillModeBtn) individualFillModeBtn.addEventListener('click', () => switchFillMode('individual'));
+    if (applyBtn)    applyBtn.addEventListener('click', applyBulkFillToAll);
+    if (nominalInput) {
+        nominalInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '');
+        });
+    }
+}
+
+// ============================================================
 // 🔧 INITIALIZE ON DOM READY
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Starlink Form initialized with Enhanced Loading & Double POST Protection');
@@ -3517,6 +3895,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // 🌍 EXPORT selectedKits to window scope for stepper.js validation
 window.selectedKits = selectedKits;
 window.availableKits = availableKits;
+window.inputMode = inputMode;
+window.fillMode  = fillMode;
+window.initBulkFillSection = initBulkFillSection;
 
 // 🌍 EXPORT resetFormAfterSuccess for stepper.js to call after auto-reset
 window.resetFormAfterSuccess = resetFormAfterSuccess;

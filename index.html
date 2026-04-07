@@ -152,6 +152,21 @@
 <p>Input nomor KIT atau nama client untuk memilih KIT yang akan diperpanjang</p>
 </div>
 
+<!-- Input Mode Toggle -->
+<div class="form-group" id="inputModeToggleGroup">
+<label>Mode Input</label>
+<div style="display:flex;gap:0;border:2px solid #475569;border-radius:8px;overflow:hidden;max-width:400px;">
+  <button type="button" id="singleModeBtn"
+    style="flex:1;padding:10px 16px;border:none;background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:white;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.3s;">
+    📱 Single KIT
+  </button>
+  <button type="button" id="bulkModeBtn"
+    style="flex:1;padding:10px 16px;border:none;background:transparent;color:#94a3b8;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.3s;">
+    📋 Bulk Input
+  </button>
+</div>
+</div>
+
 <!-- Search Input Section -->
 <div class="form-group">
 <div id="kitNumberSection">
@@ -194,6 +209,38 @@
 </div>
 <div class="loading" id="clientNamesLoading">Loading clients...</div>
 </div>
+
+<!-- Bulk Input Section (hidden by default) -->
+<div id="bulkInputSection" style="display:none;">
+  <label style="display:block;color:#f1f5f9;font-weight:600;margin-bottom:8px;">Nomor KIT / Serial Number (satu per baris) *</label>
+  <textarea id="bulkKitTextarea" rows="8"
+    placeholder="Masukkan nomor KIT, satu per baris&#10;Contoh:&#10;KIT304096716&#10;KIT304096717&#10;KIT304096718"
+    style="width:100%;padding:12px 15px;border:2px solid #475569;border-radius:8px;font-size:14px;background:#334155;color:#f1f5f9;font-family:'Roboto Mono',monospace;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+  <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
+    <button type="button" id="validateBulkBtn"
+      style="padding:12px 24px;background:linear-gradient(135deg,#065f46 0%,#10b981 100%);border:none;border-radius:8px;color:white;font-weight:600;font-size:14px;cursor:pointer;transition:all 0.3s;">
+      ✅ Validasi Semua
+    </button>
+    <button type="button" id="clearBulkBtn"
+      style="padding:12px 16px;background:#334155;border:2px solid #475569;border-radius:8px;color:#94a3b8;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.3s;">
+      🗑️ Bersihkan
+    </button>
+    <span id="bulkValidateStatus" style="color:#94a3b8;font-size:13px;"></span>
+  </div>
+  <!-- Progress Bar -->
+  <div id="bulkProgressContainer" style="display:none;margin-top:12px;">
+    <div style="background:#1e293b;border-radius:6px;overflow:hidden;height:10px;border:1px solid #475569;">
+      <div id="bulkProgressBar" style="height:100%;background:linear-gradient(90deg,#10b981,#34d399);width:0%;transition:width 0.3s ease;"></div>
+    </div>
+    <div id="bulkProgressText" style="color:#94a3b8;font-size:12px;margin-top:5px;text-align:center;">Memvalidasi... 0/0</div>
+  </div>
+  <!-- Results -->
+  <div id="bulkResultsContainer" style="display:none;margin-top:14px;padding:14px;background:#0f172a;border-radius:8px;border:1px solid #334155;">
+    <div id="bulkResultsSummary" style="font-weight:600;color:#f1f5f9;margin-bottom:10px;font-size:14px;display:flex;gap:10px;flex-wrap:wrap;"></div>
+    <div id="bulkResultsList" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"></div>
+  </div>
+</div>
+
 <div class="loading" id="kitLoading">Memvalidasi nomor KIT...</div>
 <div class="validation-message" id="kitValidation"></div>
 
@@ -277,6 +324,64 @@
 <input type="text" id="nominal" name="nominal" placeholder="Auto-calculated from per-KIT nominals" min="10000" step="1000">
 </div>
 <small style="color:#94a3b8;font-size:12px;">Total nominal dihitung otomatis dari nominal per KIT di Step 2</small>
+</div>
+
+<!-- Bulk Fill Section (only shown when inputMode === 'bulk') -->
+<div id="bulkFillSection" style="display:none;">
+  <div class="form-group">
+    <label>✏️ Mode Pengisian Data</label>
+    <div style="display:flex;gap:0;border:2px solid #475569;border-radius:8px;overflow:hidden;max-width:450px;margin-bottom:14px;">
+      <button type="button" id="bulkFillModeBtn"
+        style="flex:1;padding:10px 16px;border:none;background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:white;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.3s;">
+        📋 Bulk Fill (Semua Sama)
+      </button>
+      <button type="button" id="individualFillModeBtn"
+        style="flex:1;padding:10px 16px;border:none;background:transparent;color:#94a3b8;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.3s;">
+        ✏️ Individual (Per KIT)
+      </button>
+    </div>
+    <small style="color:#64748b;font-size:11px;">Bulk Fill: satu nilai untuk semua KIT. Individual: isi masing-masing KIT.</small>
+  </div>
+  <!-- Bulk Fill Form -->
+  <div id="bulkFillForm" style="padding:16px;background:#0f172a;border-radius:10px;border:2px solid #3b82f6;margin-bottom:14px;">
+    <div style="font-weight:700;color:#60a5fa;font-size:13px;margin-bottom:12px;">🗂️ Isi Data untuk Semua KIT Sekaligus</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+      <div style="flex:1;min-width:140px;">
+        <label style="display:block;color:#fef3c7;font-size:12px;font-weight:600;margin-bottom:5px;">💳 Tipe Pembayaran *</label>
+        <select id="bulkTipeSelect"
+          style="width:100%;padding:10px 12px;background:#1e293b;border:2px solid #475569;border-radius:6px;color:#f1f5f9;font-size:14px;font-weight:600;cursor:pointer;">
+          <option value="">-- Pilih Tipe --</option>
+          <option value="Aktivasi">🚀 Aktivasi</option>
+          <option value="Perpanjangan">🔄 Perpanjangan</option>
+          <option value="Migrasi">🔀 Migrasi</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px;">
+        <label style="display:block;color:#fef3c7;font-size:12px;font-weight:600;margin-bottom:5px;">💰 Nominal *</label>
+        <input type="text" id="bulkNominalInput" placeholder="Contoh: 150000"
+          style="width:100%;padding:10px 12px;background:#1e293b;border:2px solid #475569;border-radius:6px;color:#f1f5f9;font-size:14px;font-family:'Roboto Mono',monospace;box-sizing:border-box;">
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <label style="display:block;color:#d1fae5;font-size:12px;font-weight:600;margin-bottom:5px;">📅 Bulan</label>
+        <select id="bulkBulanSelect"
+          style="width:100%;padding:10px 12px;background:#1e293b;border:2px solid #475569;border-radius:6px;color:#f1f5f9;font-size:14px;cursor:pointer;"></select>
+      </div>
+      <div style="flex:0 0 90px;">
+        <label style="display:block;color:#d1fae5;font-size:12px;font-weight:600;margin-bottom:5px;">📅 Tahun</label>
+        <select id="bulkTahunSelect"
+          style="width:100%;padding:10px 12px;background:#1e293b;border:2px solid #475569;border-radius:6px;color:#f1f5f9;font-size:14px;cursor:pointer;"></select>
+      </div>
+      <div style="flex:0 0 auto;">
+        <button type="button" id="applyBulkFillBtn"
+          style="padding:10px 20px;background:linear-gradient(135deg,#065f46 0%,#10b981 100%);border:none;border-radius:6px;color:white;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;margin-top:17px;">
+          ✅ Terapkan ke Semua
+        </button>
+      </div>
+    </div>
+    <div id="bulkFillStatus" style="margin-top:10px;font-size:13px;color:#94a3b8;"></div>
+  </div>
+  <!-- Individual Fill: KIT cards rendered here -->
+  <div id="kitListStep3" style="display:none;"></div>
 </div>
 
 <!-- Nominal Summary Display -->

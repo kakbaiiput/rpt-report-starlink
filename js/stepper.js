@@ -99,6 +99,11 @@ function goToNextStep() {
         updateNavigationButtons();
         scrollToTop();
         
+        // 🆕 Init bulk fill section when entering Step 3
+        if (currentStep === 3 && typeof window.initBulkFillSection === 'function') {
+            window.initBulkFillSection();
+        }
+
         // Auto-preview on step 4 with multiple retry attempts
         if (currentStep === 4) {
             console.log('📋 Step 4 reached - Starting preview load sequence...');
@@ -279,15 +284,22 @@ function validateStep1() {
  * Validate Step 2: KIT Selection & Client
  */
 function validateStep2() {
+    // 🆕 Bulk mode: block if no valid KITs found yet
+    if (window.inputMode === 'bulk') {
+        const bulkKits = window.selectedKits || [];
+        console.log('🔍 Step 2 Validation (bulk mode):', { kitCount: bulkKits.length });
+        return bulkKits.length > 0;
+    }
+
     const selectedKits = document.querySelectorAll('.kit-checkbox:checked');
     const clientNameText = document.getElementById('clientNameText');
     const clientName = clientNameText ? clientNameText.textContent.trim() : '';
-    
+
     // Check if client name is filled (not the default placeholder text)
-    const isClientNameValid = clientName && 
+    const isClientNameValid = clientName &&
                               clientName !== 'Akan terisi otomatis setelah nomor KIT valid' &&
                               clientName !== '';
-    
+
     // Valid if at least 1 KIT selected AND client name is filled
     const isValid = selectedKits.length > 0 && isClientNameValid;
     
