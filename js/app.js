@@ -1675,9 +1675,12 @@ function resetFormAfterSuccess() {
 
     // 🔧 CRITICAL FIX: Reset ALL state variables
     isKitValid = false;
-    validationResult = null; // Added to fix Next button staying disabled
+    validationResult = null;
     availableKits = [];
     selectedKits = [];
+    // 🆕 CRITICAL: sync window scope so stepper validateStep2 reads fresh empty state
+    window.selectedKits  = [];
+    window.availableKits = [];
 
     // Reset bulk input state
     inputMode = 'bulk'; fillMode = 'bulk'; bulkValidating = false;
@@ -1690,6 +1693,13 @@ function resetFormAfterSuccess() {
     if (bulkPC) bulkPC.style.display = 'none';
     const bulkFS = document.getElementById('bulkFillSection');
     if (bulkFS) bulkFS.style.display = 'none';
+    const bulkStatus = document.getElementById('bulkValidateStatus');
+    if (bulkStatus) bulkStatus.textContent = '';
+    // Clear old kit cards so they don't bleed into Step 3 individual fill
+    const kitList = document.getElementById('kitList');
+    if (kitList) kitList.innerHTML = '';
+    const kitListStep3 = document.getElementById('kitListStep3');
+    if (kitListStep3) kitListStep3.innerHTML = '';
 
     // Reset payment type dropdown to empty state
     const paymentTypeSelected = document.getElementById('paymentTypeSelected');
