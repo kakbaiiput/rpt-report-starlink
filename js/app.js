@@ -3174,14 +3174,17 @@ function updateKitDisplay() {
             });
 
             nominalInput.addEventListener('focus', function() {
-                this.value = kit.nominal || '';
+                // Bug 2: show raw number on focus (no dots)
+                const num = availableKits[index]?.nominal || 0;
+                this.value = num > 0 ? String(num) : '';
                 this.style.borderColor = '#3b82f6';
                 this.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
             });
 
             nominalInput.addEventListener('blur', function() {
-                if (kit.nominal) {
-                    this.value = formatRupiahInput(kit.nominal);
+                const num = availableKits[index]?.nominal || 0;
+                if (num > 0) {
+                    this.value = num.toLocaleString('id-ID');
                 }
                 this.style.borderColor = '#475569';
                 this.style.boxShadow = 'none';
@@ -3622,6 +3625,11 @@ function switchFillMode(mode) {
         if (bulkFillForm) bulkFillForm.style.display = 'none';
         if (kitListStep3) {
             kitListStep3.style.display = 'block';
+            // Reset all selections so user starts fresh (bug 1 & 3 fix)
+            availableKits.forEach(k => { k.isSelected = false; });
+            selectedKits = [];
+            window.selectedKits = [];
+            if (window.stepperNav) window.stepperNav.updateNavigationButtons();
             renderKitCardsInStep3();
         }
     }
@@ -3631,7 +3639,7 @@ function renderKitCardsInStep3() {
     const container = document.getElementById('kitListStep3');
     if (!container) return;
 
-    // Populate #kitList first (it's hidden in bulk mode but used as source)
+    // Populate #kitList (hidden) so we have the card HTML to clone
     updateKitDisplay();
 
     const originalList = document.getElementById('kitList');
@@ -3641,12 +3649,50 @@ function renderKitCardsInStep3() {
     }
     container.innerHTML = originalList.innerHTML;
 
-    // Re-attach event listeners to cloned elements
+    // Bug 3: collapse all input sections, uncheck all checkboxes by default
+    container.querySelectorAll('.kit-nominal-input, .kit-payment-type, .kit-periode-input').forEach(el => {
+        el.style.display = 'none';
+    });
+    container.querySelectorAll('.kit-checkbox').forEach(cb => { cb.checked = false; });
+
+    // Wire checkbox: toggle expand/collapse + update selectedKits (bug 1 fix)
+    container.querySelectorAll('.kit-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const kitNum = this.dataset.kit;
+            const kitIdx = availableKits.findIndex(k => k.kitNumber === kitNum);
+            if (kitIdx < 0) return;
+
+            availableKits[kitIdx].isSelected = this.checked;
+            selectedKits = availableKits.filter(k => k.isSelected);
+            window.selectedKits = selectedKits;
+
+            // Expand/collapse: walk up to the card root, then find input sections
+            const paddingDiv = this.closest('div[style*="padding: 15px"]') ||
+                               this.closest('div[style*="padding:15px"]') ||
+                               this.parentElement?.parentElement;
+            if (paddingDiv) {
+                paddingDiv.querySelectorAll('.kit-nominal-input, .kit-payment-type, .kit-periode-input')
+                    .forEach(el => { el.style.display = this.checked ? 'block' : 'none'; });
+            }
+
+            updateStep3Summary();
+            if (window.stepperNav) window.stepperNav.updateNavigationButtons();
+        });
+    });
+
+    // Wire nominal inputs
     container.querySelectorAll('.nominal-input-per-kit').forEach(input => {
         const idx = parseInt(input.dataset.kitIndex);
         input.addEventListener('input', function() { handleKitNominalInput(idx, this.value); });
-        input.addEventListener('focus', function() { if (this.value === '0' || this.value === '') this.value = ''; });
-        input.addEventListener('blur',  function() { if (!this.value) { handleKitNominalInput(idx, '0'); } });
+        // Bug 2: show raw number on focus, formatted on blur
+        input.addEventListener('focus', function() {
+            const num = availableKits[idx]?.nominal || 0;
+            this.value = num > 0 ? String(num) : '';
+        });
+        input.addEventListener('blur', function() {
+            const num = availableKits[idx]?.nominal || 0;
+            this.value = num > 0 ? num.toLocaleString('id-ID') : '';
+        });
     });
     container.querySelectorAll('.payment-type-per-kit').forEach(sel => {
         const idx = parseInt(sel.dataset.kitIndex);
@@ -3664,12 +3710,6 @@ function renderKitCardsInStep3() {
             handleKitPeriodeChange(idx, availableKits[idx]?.periodeBulan, parseInt(this.value));
         });
     });
-    // Show the per-KIT input fields (they're hidden by default until kit is selected)
-    container.querySelectorAll('.kit-nominal-input, .kit-payment-type, .kit-periode-input').forEach(el => {
-        el.style.display = 'block';
-    });
-    // Check all checkboxes (all bulk kits are selected)
-    container.querySelectorAll('.kit-checkbox').forEach(cb => { cb.checked = true; });
 }
 
 async function handleBulkValidation() {
@@ -3910,6 +3950,15 @@ function initBulkInputUI() {
             const formatted = num > 0 ? num.toLocaleString('id-ID') : '';
             this.value = formatted;
             this.setSelectionRange(formatted.length, formatted.length);
+        });
+        // Bug 2: raw number on focus, formatted on blur
+        nominalInput.addEventListener('focus', function() {
+            const digits = this.value.replace(/\D/g, '');
+            this.value = digits;
+        });
+        nominalInput.addEventListener('blur', function() {
+            const num = parseInt(this.value.replace(/\D/g, '')) || 0;
+            this.value = num > 0 ? num.toLocaleString('id-ID') : '';
         });
     }
 }
