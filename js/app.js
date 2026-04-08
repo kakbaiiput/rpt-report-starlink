@@ -3230,12 +3230,22 @@ function updateKitDisplay() {
 
 // 🆕 Handle nominal input per KIT
 function handleKitNominalInput(kitIndex, value) {
-    // Remove non-numeric characters except digits
+    // Remove non-numeric characters
     const cleaned = value.replace(/[^\d]/g, '');
     const numericValue = parseInt(cleaned) || 0;
 
     // Update kit nominal
     availableKits[kitIndex].nominal = numericValue;
+
+    // Format display with dot thousands separator on ALL matching inputs
+    document.querySelectorAll(`.nominal-input-per-kit[data-kit-index="${kitIndex}"]`).forEach(input => {
+        const formatted = numericValue > 0 ? numericValue.toLocaleString('id-ID') : '';
+        if (input.value !== formatted) {
+            input.value = formatted;
+            // Keep cursor at end
+            input.setSelectionRange(formatted.length, formatted.length);
+        }
+    });
 
     // Update selectedKits if this kit is selected
     if (availableKits[kitIndex].isSelected) {
@@ -3895,7 +3905,11 @@ function initBulkInputUI() {
     if (applyBtn)    applyBtn.addEventListener('click', applyBulkFillToAll);
     if (nominalInput) {
         nominalInput.addEventListener('input', function() {
-            this.value = this.value.replace(/\D/g, '');
+            const digits = this.value.replace(/\D/g, '');
+            const num = parseInt(digits) || 0;
+            const formatted = num > 0 ? num.toLocaleString('id-ID') : '';
+            this.value = formatted;
+            this.setSelectionRange(formatted.length, formatted.length);
         });
     }
 }
