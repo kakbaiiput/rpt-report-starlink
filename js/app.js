@@ -1633,12 +1633,15 @@ function handleSubmitError(error) {
         
         // Show error banner
         let errorMessage = 'Error submit: ' + error.message;
-        if (error.message.includes('duplicate')) {
+        if (error.message.includes('duplicate') || error.message.includes('Duplicate') || error.message.includes('already')) {
             errorMessage += ' (Data mungkin sudah tersimpan, cek laporan)';
+            showBanner(errorMessage, 'error');
+            // Reset form to Step 1 for duplicate errors
+            resetFormAfterSuccess();
+        } else {
+            showBanner(errorMessage, 'error');
         }
-        
-        showBanner(errorMessage, 'error');
-        
+
     }, 3000);
     
     CONFIG.log('✅ handleSubmitError completed');
