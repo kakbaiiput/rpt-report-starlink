@@ -3620,12 +3620,18 @@ function switchFillMode(mode) {
 function renderKitCardsInStep3() {
     const container = document.getElementById('kitListStep3');
     if (!container) return;
-    // Re-render kit cards but target kitListStep3 container
-    // We temporarily swap the target, render, then restore
+
+    // Populate #kitList first (it's hidden in bulk mode but used as source)
+    updateKitDisplay();
+
     const originalList = document.getElementById('kitList');
-    if (!originalList) { container.innerHTML = ''; return; }
+    if (!originalList || originalList.innerHTML.trim() === '') {
+        container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:20px;">Tidak ada KIT yang dipilih</p>';
+        return;
+    }
     container.innerHTML = originalList.innerHTML;
-    // Attach event listeners to cloned elements
+
+    // Re-attach event listeners to cloned elements
     container.querySelectorAll('.nominal-input-per-kit').forEach(input => {
         const idx = parseInt(input.dataset.kitIndex);
         input.addEventListener('input', function() { handleKitNominalInput(idx, this.value); });
@@ -3639,15 +3645,21 @@ function renderKitCardsInStep3() {
     container.querySelectorAll('.periode-bulan-per-kit').forEach(sel => {
         const idx = parseInt(sel.dataset.kitIndex);
         sel.addEventListener('change', function() {
-            handleKitPeriodeChange(idx, parseInt(this.value), availableKits[idx].periodeTahun);
+            handleKitPeriodeChange(idx, parseInt(this.value), availableKits[idx]?.periodeTahun);
         });
     });
     container.querySelectorAll('.periode-tahun-per-kit').forEach(sel => {
         const idx = parseInt(sel.dataset.kitIndex);
         sel.addEventListener('change', function() {
-            handleKitPeriodeChange(idx, availableKits[idx].periodeBulan, parseInt(this.value));
+            handleKitPeriodeChange(idx, availableKits[idx]?.periodeBulan, parseInt(this.value));
         });
     });
+    // Show the per-KIT input fields (they're hidden by default until kit is selected)
+    container.querySelectorAll('.kit-nominal-input, .kit-payment-type, .kit-periode-input').forEach(el => {
+        el.style.display = 'block';
+    });
+    // Check all checkboxes (all bulk kits are selected)
+    container.querySelectorAll('.kit-checkbox').forEach(cb => { cb.checked = true; });
 }
 
 async function handleBulkValidation() {
