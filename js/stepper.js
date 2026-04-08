@@ -502,9 +502,10 @@ function setupFormValidation() {
     const formElement = document.getElementById('paymentForm');
     if (formElement) {
         formElement.addEventListener('keydown', function(e) {
-            // If Enter key is pressed
             if (e.key === 'Enter') {
-                // Check if we're in Step 3
+                // Never block Enter inside a textarea (needed for newlines)
+                if (e.target.tagName === 'TEXTAREA') return;
+
                 if (currentStep === 3) {
                     e.preventDefault();
                     console.log('⚠️ Enter key blocked in Step 3 - use Next button to proceed');
